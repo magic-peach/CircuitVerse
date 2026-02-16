@@ -27,6 +27,12 @@
         <strong><%= t("groups.show.primary_mentor_heading") %></strong>
         <%= @group.primary_mentor.name %>
       </h4>
+      <% if @group.allowed_domain.present? %>
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle"></i>
+          <strong>Email Domain Restriction:</strong> Only users with <code><%= @group.allowed_domain %></code> email addresses can join this group via invite link.
+        </div>
+      <% end %>
     </div>
   </div>
   <!-- Mentor Section -->
