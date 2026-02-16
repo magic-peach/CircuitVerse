@@ -7,6 +7,12 @@
       </div>
       <div class="modal-body">
         <p><%= t("groups.add_member_description") %></p>
+        <% if group_member.group.allowed_domain.present? %>
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>Note:</strong> Users joining via invite link must have a <code><%= group_member.group.allowed_domain %></code> email address.
+          </div>
+        <% end %>
         <%= form_with(model: group_member, local: true) do |form| %>
           <% if group_member.errors.any? %>
             <div class="error-message">
