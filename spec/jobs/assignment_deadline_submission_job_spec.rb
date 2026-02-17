@@ -29,6 +29,15 @@ RSpec.describe AssignmentDeadlineSubmissionJob, type: :job do
         expect(@assignment.status).to eq("open")
       end
 
+      it "if deadline is within 10 seconds in the future, don't close" do
+        @assignment.status = "open"
+        @assignment.deadline = Time.zone.now + 5
+        @assignment.save!
+        expect(described_class.perform_now(@assignment.id)).to be_nil
+        @assignment.reload
+        expect(@assignment.status).to eq("open")
+      end
+
       it "if deadline has passed close assignment" do
         @assignment.status = "open"
         @assignment.deadline = Time.zone.now - 10
