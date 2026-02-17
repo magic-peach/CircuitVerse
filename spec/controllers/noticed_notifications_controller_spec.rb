@@ -39,8 +39,16 @@ describe Users::NoticedNotificationsController, type: :request do
     end
 
     it "mark notification as read" do
+      sign_in @author
       post mark_as_read_path(id: @author.id, notification_id: @notification)
       expect(@author.noticed_notifications.read.count).to eq(1)
+    end
+
+    it "does not mark another user's notification as read" do
+      post mark_as_read_path(id: @author.id, notification_id: @notification)
+
+      expect(response).to have_http_status(:not_found)
+      expect(@author.noticed_notifications.unread.count).to eq(1)
     end
   end
 
