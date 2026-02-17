@@ -107,6 +107,12 @@ describe ProjectPolicy do
         check_auth_exception(subject, :direct_view_access)
         check_auth_exception(subject, :embed)
       end
+
+      it "returns false when assignment reference is stale" do
+        allow(project).to receive_messages(assignment_id: 999_999, assignment: nil)
+
+        expect(subject.check_view_access?).to be(false)
+      end
     end
   end
 end

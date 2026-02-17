@@ -28,12 +28,10 @@ class ProjectPolicy < ApplicationPolicy
 
   def check_view_access?
     project.project_access_type != "Private" ||
-      (!user.nil? && project.author_id == user.id) ||
-      (!user.nil? && !project.assignment_id.nil? &&
-      ((project.assignment.group.primary_mentor_id == user.id) ||
-      project.assignment.group.group_members.exists?(user_id: user.id, mentor: true))) ||
-      (!user.nil? && Collaboration.exists?(project_id: project.id, user_id: user.id)) ||
-      (!user.nil? && user.admin)
+      authored_by_user? ||
+      assignment_group_access? ||
+      collaborator_access? ||
+      admin_access?
   end
 
   def check_direct_view_access?
@@ -74,4 +72,26 @@ class ProjectPolicy < ApplicationPolicy
   def author_access?
     (user.present? && user.admin?) || project.author_id == (user.present? && user.id)
   end
+
+  private
+
+    def authored_by_user?
+      user.present? && project.author_id == user.id
+    end
+
+    def assignment_group_access?
+      return false unless user.present? && project.assignment_id.present?
+
+      group = project.assignment&.group
+      group&.primary_mentor_id == user.id ||
+        group&.group_members&.exists?(user_id: user.id, mentor: true)
+    end
+
+    def collaborator_access?
+      user.present? && Collaboration.exists?(project_id: project.id, user_id: user.id)
+    end
+
+    def admin_access?
+      user.present? && user.admin
+    end
 end
