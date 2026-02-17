@@ -128,4 +128,11 @@ describe AssignmentPolicy do
       it { is_expected.not_to permit(:edit) }
     end
   end
+
+  context "user is not a group member" do
+    let(:user) { FactoryBot.create(:user) }
+    let(:assignment) { FactoryBot.create(:assignment, group: @group, status: "open") }
+
+    it { is_expected.not_to permit(:start) }
+  end
 end

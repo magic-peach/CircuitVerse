@@ -25,6 +25,7 @@ class AssignmentPolicy < ApplicationPolicy
   def start?
     # assignment should not be closed and not submitted
     assignment.status != "closed" \
+      && user.groups.exists?(id: assignment.group.id) \
       && !Project.exists?(author_id: user.id, assignment_id: assignment.id)
   end
 

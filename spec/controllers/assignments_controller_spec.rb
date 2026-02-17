@@ -86,6 +86,15 @@ describe AssignmentsController, type: :request do
       get assignment_start_path(@group, @assignment)
       expect(response.status).to eq(302)
     end
+
+    it "restricts start for non group members" do
+      sign_out @member
+      sign_in_random_user
+
+      get assignment_start_path(@group, @assignment)
+
+      expect(response.body).to include("You are not authorized to do the requested operation")
+    end
   end
 
   describe "#close" do
