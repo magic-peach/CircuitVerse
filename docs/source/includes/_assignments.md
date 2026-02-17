@@ -624,7 +624,7 @@ HTTP/1.1 202 ACCEPTED
 
 ## START Assignment
 
-Group Members can start working on the assignment in`/api/v1/assignments/:id/start`. This creates a new private project for he user to work upon. Authentication `token` is passed through `Authorization` header and is **required**.
+Group Members can start working on the assignment in`/api/v1/assignments/:id/start`. This creates a new private project for the user to work upon. Authentication `token` is passed through `Authorization` header and is **required**.
 
 ### URL Parameters
 
