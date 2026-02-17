@@ -33,8 +33,18 @@ RSpec.describe Api::V1::NotificationsController, "#mark_as_read", type: :request
         token = get_auth_token(@author)
         patch "/api/v1/notifications/mark_as_read/#{@notification.id}",
               headers: { Authorization: "Token #{token}" }, as: :json
-        expect(response).to have_http_status(:created)
+        expect(response).to have_http_status(:ok)
         expect(response).to match_response_schema("read_notification")
+      end
+
+      it "does not mark another user's notification as read" do
+        token = get_auth_token(@user)
+        patch "/api/v1/notifications/mark_as_read/#{@notification.id}",
+              headers: { Authorization: "Token #{token}" }, as: :json
+
+        expect(response).to have_http_status(:not_found)
+        @notification.reload
+        expect(@notification.read_at).to be_nil
       end
     end
   end
