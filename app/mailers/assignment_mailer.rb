@@ -6,8 +6,11 @@ class AssignmentMailer < ApplicationMailer
 
     @assignment = assignment
     @user = user
+    @group = @assignment.group
+    @primary_mentor = @group&.primary_mentor
+    @assignment_url = @group.present? ? group_assignment_url(@group, @assignment) : nil
     mail(to: [@user.email],
-         subject: "New Assignment in #{Group.find_by(id: @assignment.group_id).name}")
+         subject: "New Assignment in #{@group&.name || 'Unknown Group'}")
   end
 
   def update_assignment_email(user, assignment)
@@ -15,7 +18,10 @@ class AssignmentMailer < ApplicationMailer
 
     @assignment = assignment
     @user = user
+    @group = @assignment.group
+    @primary_mentor = @group&.primary_mentor
+    @assignment_url = @group.present? ? group_assignment_url(@group, @assignment) : nil
     mail(to: [@user.email],
-         subject: "Assignment Updated in #{Group.find_by(id: @assignment.group_id).name}")
+         subject: "Assignment Updated in #{@group&.name || 'Unknown Group'}")
   end
 end

@@ -16,6 +16,13 @@ RSpec.describe AssignmentMailer, type: :mailer do
       expect(mail.to).to eq([@user.email])
       expect(mail.subject).to eq("New Assignment in #{@group.name}")
     end
+
+    it "uses fallback group name when group is missing" do
+      assignment_without_group = FactoryBot.build(:assignment, group: nil)
+      mail = described_class.new_assignment_email(@user, assignment_without_group)
+
+      expect(mail.subject).to eq("New Assignment in Unknown Group")
+    end
   end
 
   describe "#update_assignment_email" do
@@ -24,6 +31,13 @@ RSpec.describe AssignmentMailer, type: :mailer do
     it "sends update assignment link" do
       expect(mail.to).to eq([@user.email])
       expect(mail.subject).to eq("Assignment Updated in #{@group.name}")
+    end
+
+    it "uses fallback group name when group is missing" do
+      assignment_without_group = FactoryBot.build(:assignment, group: nil)
+      mail = described_class.update_assignment_email(@user, assignment_without_group)
+
+      expect(mail.subject).to eq("Assignment Updated in Unknown Group")
     end
   end
 end
