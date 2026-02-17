@@ -90,6 +90,16 @@ describe SimulatorController, type: :request do
             expect(@project.name).to eq("Updated Name")
             expect(response.status).to eq(200)
           end
+
+          it "continues when image file is already deleted" do
+            sign_in @user
+            allow(File).to receive(:delete).and_raise(Errno::ENOENT)
+            allow_any_instance_of(described_class).to receive(:check_to_delete).and_return(true)
+
+            post "/simulator/update_data", params: update_params
+
+            expect(response.status).to eq(200)
+          end
         end
 
         context "user other than author is signed in" do

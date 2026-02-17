@@ -96,7 +96,7 @@ class SimulatorController < ApplicationController
     image_file = return_image_file(params[:image])
     @project.image_preview = image_file
     image_file.close
-    File.delete(image_file) if check_to_delete(params[:image])
+    remove_preview_file(image_file, params[:image])
     @project.name = sanitize(params[:name])
     @project.save
     @project.project_datum.save
@@ -215,5 +215,15 @@ class SimulatorController < ApplicationController
         filename: "preview_#{Time.zone.now.to_f.to_s.sub('.', '')}.jpeg",
         content_type: "img/jpeg"
       )
+    end
+
+    def remove_preview_file(image_file, image_param)
+      return unless check_to_delete(image_param)
+
+      File.delete(image_file)
+    rescue Errno::ENOENT
+      Rails.logger.warn("Attempted to delete non-existent image file")
+    rescue StandardError => e
+      Rails.logger.error("Error deleting image file: #{e.message}")
     end
 end
