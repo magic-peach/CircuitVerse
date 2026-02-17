@@ -101,6 +101,7 @@
     <% end %>
     <tbody class="groups-expanded-table">
       <% @group.assignments.includes(projects: :grade).each do |assignment| %>
+        <% project_assignment = assignment.projects.find { |p| p.author_id == current_user.id } unless policy(@group).admin_access? %>
         <tr class="groups-table-rows">
           <td>
             <div class="groups-assignment-details groups-expanded-assignment-name">
@@ -167,7 +168,6 @@
                 <% end %>
               </div>
             <% else %>
-              <% project_assignment = assignment.projects.find { |p| p.author_id == current_user.id } %>
               <% if(assignment.deadline > Time.current) %>
                 <% if project_assignment.nil? %>
                   <div class="groups-assignment-details">
@@ -224,6 +224,7 @@
     </tbody>
     <tbody class="groups-collapsed-table">
       <% @group.assignments.includes(projects: :grade).each do |assignment| %>
+        <% project_assignment = assignment.projects.find { |p| p.author_id == current_user.id } unless policy(@group).admin_access? %>
         <tr>
           <table class="groups-table-rows groups-collapsed-table">
             <tr>
@@ -294,7 +295,6 @@
                     <% end %>
                   </div>
                 <% else %>
-                  <% project_assignment = assignment.projects.find { |p| p.author_id == current_user.id } %>
                   <% if(assignment.deadline > Time.current) %>
                     <% if project_assignment.nil? %>
                       <div class="groups-assignment-details">
