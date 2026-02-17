@@ -56,6 +56,19 @@ RSpec.describe Api::V1::ProjectsController, "#index", type: :request do
       end
     end
 
+    context "when page size is larger than allowed maximum" do
+      before do
+        FactoryBot.create_list(:project, 120, project_access_type: "Public")
+      end
+
+      it "caps the number of returned records" do
+        get "/api/v1/projects", params: { page: { size: 1000, number: 1 } }, as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body["data"].length).to eq(100)
+      end
+    end
+
     context "when authenticated with user who has authored a project" do
       before do
         # creates 2 public projects

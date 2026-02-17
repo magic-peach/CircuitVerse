@@ -11,6 +11,7 @@ class Api::V1::BaseController < ActionController::API
   }
 
   DEFAULT_PER_PAGE = 9
+  MAX_PER_PAGE = 100
 
   rescue_from ActionController::ParameterMissing do
     api_error(status: 400, errors: "invalid parameters")
@@ -65,9 +66,10 @@ class Api::V1::BaseController < ActionController::API
   end
 
   def paginate(resource)
+    requested_page_size = (params.to_unsafe_h.dig("page", "size") || DEFAULT_PER_PAGE).to_i
     resource.paginate(
       page: (params.to_unsafe_h.dig("page", "number") || 1).to_i,
-      per_page: (params.to_unsafe_h.dig("page", "size") || DEFAULT_PER_PAGE).to_i
+      per_page: [requested_page_size, MAX_PER_PAGE].min
     )
   end
 
