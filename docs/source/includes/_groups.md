@@ -294,7 +294,7 @@ Host: localhost
 HTTP/1.1 200 OK
 ```
 
-> JSON response will be similiar as above
+> JSON response will be similar to above
 
 ## GET Group Details
 
