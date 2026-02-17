@@ -199,7 +199,13 @@ class Api::V1::ProjectsController < Api::V1::BaseController
 
     def handle_image_file_cleanup
       @image_file.close
-      File.delete(@image_file) if check_to_delete(params[:image])
+      return unless check_to_delete(params[:image])
+
+      File.delete(@image_file)
+    rescue Errno::ENOENT
+      Rails.logger.warn("Attempted to delete non-existent image file")
+    rescue StandardError => e
+      Rails.logger.error("Error deleting image file: #{e.message}")
     end
 
     def load_index_projects

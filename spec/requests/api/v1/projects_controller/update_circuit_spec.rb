@@ -43,6 +43,22 @@ RSpec.describe Api::V1::ProjectsController, "#update_circuit", type: :request do
         end
       end
 
+      context "when image cleanup fails due to missing temp file" do
+        before do
+          token = get_auth_token(user)
+          allow(File).to receive(:delete).and_raise(Errno::ENOENT)
+          patch "/api/v1/projects/update_circuit",
+                headers: { Authorization: "Token #{token}" },
+                params: update_params, as: :json
+        end
+
+        it "still updates project" do
+          project.reload
+          expect(project.name).to eq("Updated Name")
+          expect(response).to have_http_status(:ok)
+        end
+      end
+
       context "when authenticated user is not the author of the project" do
         before do
           token = get_auth_token(random_user)
