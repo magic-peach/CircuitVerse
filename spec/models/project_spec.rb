@@ -104,5 +104,14 @@ RSpec.describe Project, type: :model do
         end.to change(FeaturedCircuit, :count).by(-1)
       end
     end
+
+    describe "#fork" do
+      it "forks project even when circuit preview is not attached" do
+        project = FactoryBot.create(:project, author: @user)
+        forking_user = FactoryBot.create(:user)
+
+        expect { project.fork(forking_user) }.not_to raise_error
+      end
+    end
   end
 end
