@@ -26,7 +26,7 @@ class StarsController < ApplicationController
   # POST /stars
   # POST /stars.json
   def create
-    @star = Star.new(star_params)
+    @star = current_user.stars.new(project_id: star_params[:project_id])
     @star.save
     render plain: "Star added!"
     # respond_to do |format|
@@ -69,11 +69,11 @@ class StarsController < ApplicationController
 
     # Use callbacks to share common setup or constraints between actions.
     def set_star
-      @star = Star.find(params[:id])
+      @star = current_user.stars.find(params[:id])
     end
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def star_params
-      params.expect(star: %i[user_id project_id])
+      params.expect(star: [:project_id])
     end
 end
