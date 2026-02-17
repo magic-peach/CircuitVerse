@@ -253,6 +253,22 @@ describe AssignmentsController, type: :request do
         end.to change(Assignment, :count).by(1)
       end
 
+      it "generates long LTI credentials when lms integration is enabled" do
+        sign_in @primary_mentor
+        Flipper.enable(:lms_integration)
+
+        post group_assignments_path(@group), params: {
+          assignment: { description: "group assignment", name: "Test Name", grading_scale: "percent" },
+          "lms-integration-check" => "1"
+        }
+
+        assignment = Assignment.order(:created_at).last
+        expect(assignment.lti_consumer_key.length).to eq(64)
+        expect(assignment.lti_shared_secret.length).to eq(64)
+      ensure
+        Flipper.disable(:lms_integration)
+      end
+
       it "sends notifications to group members" do
         sign_in @primary_mentor
         post group_assignments_path(@group), params: { assignment:

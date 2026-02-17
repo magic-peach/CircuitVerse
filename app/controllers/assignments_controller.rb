@@ -76,8 +76,8 @@ class AssignmentsController < ApplicationController
     description = params["description"]
 
     if Flipper.enabled?(:lms_integration, current_user) && params["lms-integration-check"]
-      lti_consumer_key = SecureRandom.hex(4)
-      lti_shared_secret = SecureRandom.hex(4)
+      lti_consumer_key = SecureRandom.hex(32)
+      lti_shared_secret = SecureRandom.hex(32)
     end
 
     params = assignment_create_params
@@ -112,8 +112,8 @@ class AssignmentsController < ApplicationController
     description = params["description"]
 
     if Flipper.enabled?(:lms_integration, current_user) && params["lms-integration-check"]
-      lti_consumer_key = @assignment.lti_consumer_key.presence || SecureRandom.hex(4)
-      lti_shared_secret = @assignment.lti_shared_secret.presence || SecureRandom.hex(4)
+      lti_consumer_key = @assignment.lti_consumer_key.presence || SecureRandom.hex(32)
+      lti_shared_secret = @assignment.lti_shared_secret.presence || SecureRandom.hex(32)
     end
 
     params = assignment_update_params
