@@ -10,12 +10,9 @@ class GroupsController < ApplicationController
   # GET /groups/1.json
   def show
     @group_member = @group.group_members.new
-    @group.assignments.each do |assignment|
-      if (assignment.status == "reopening") && (assignment.deadline < Time.zone.now)
-        assignment.status = "closed"
-        assignment.save
-      end
-    end
+    @group.assignments.where(status: "reopening")
+          .where(deadline: ...Time.current)
+          .update_all(status: "closed") # rubocop:disable Rails/SkipsModelValidations
   end
 
   def generate_token
