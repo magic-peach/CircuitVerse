@@ -16,12 +16,12 @@
       </div>
     </div>
     <div class="field mb-3">
-      <h5><%= form.label :allowed_domain, "Allowed Email Domain (Optional)" %></h5>
+      <h5><%= form.label :allowed_domain, t("groups.allowed_domain_label") %></h5>
       <div class="input-group groups-input-group">
-        <%= form.text_field :allowed_domain, id: :group_allowed_domain, class: "form-control form-input", placeholder: "e.g., sjec.ac.in" %>
+        <%= form.text_field :allowed_domain, id: :group_allowed_domain, class: "form-control form-input", placeholder: t("groups.allowed_domain_placeholder") %>
       </div>
       <small class="form-text text-muted">
-        Only users with email addresses from this domain will be able to join the group via invite link. Leave blank to allow any domain.
+        <%= t("groups.allowed_domain_help") %>
       </small>
     </div>
   </div>

@@ -29,7 +29,10 @@
       <% if @group.allowed_domain.present? %>
         <div class="alert alert-info mt-3">
           <i class="fas fa-info-circle"></i>
-          <strong>Email Domain Restriction:</strong> Only users with <code><%= @group.allowed_domain %></code> email addresses can join this group via invite link.
+          <strong><%= t("groups.show.email_domain_restriction_label") %></strong>
+          <%= t("groups.show.only_users_with_domain_prefix") %>
+          <code><%= @group.allowed_domain %></code>
+          <%= t("groups.show.only_users_with_domain_suffix") %>
         </div>
       <% end %>
     </div>

@@ -75,6 +75,14 @@ RSpec.describe Group, type: :model do
       expect(group).to be_valid
     end
 
+    it "normalizes allowed_domain before validation" do
+      group = FactoryBot.build(:group, primary_mentor: @primary_mentor, allowed_domain: "  SJEC.AC.IN  ")
+
+      group.validate
+
+      expect(group.allowed_domain).to eq("sjec.ac.in")
+    end
+
     it "rejects invalid domain formats" do
       group = FactoryBot.build(:group, primary_mentor: @primary_mentor, allowed_domain: "invalid")
       expect(group).not_to be_valid

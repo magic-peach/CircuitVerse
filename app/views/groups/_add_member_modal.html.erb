@@ -10,7 +10,10 @@
         <% if group_member.group.allowed_domain.present? %>
           <div class="alert alert-info">
             <i class="fas fa-info-circle"></i>
-            <strong>Note:</strong> Users joining via invite link must have a <code><%= group_member.group.allowed_domain %></code> email address.
+            <strong><%= t("groups.allowed_domain_note_label") %></strong>
+            <%= t("groups.allowed_domain_invite_requirement_prefix") %>
+            <code><%= group_member.group.allowed_domain %></code>
+            <%= t("groups.allowed_domain_invite_requirement_suffix") %>
           </div>
         <% end %>
         <%= form_with(model: group_member, local: true) do |form| %>
