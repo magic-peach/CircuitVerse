@@ -69,7 +69,9 @@ class Assignment < ApplicationRecord
   end
 
   def project_order
-    projects.includes(:grade, :author).sort_by { |p| p.author.name }
+    projects.joins(:author)
+            .includes(:grade, :author)
+            .order("users.name ASC")
             .map { |project| ProjectDecorator.new(project) }
   end
 
