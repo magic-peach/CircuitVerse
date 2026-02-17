@@ -11,9 +11,7 @@
           <div class="alert alert-info">
             <i class="fas fa-info-circle"></i>
             <strong><%= t("groups.allowed_domain_note_label") %></strong>
-            <%= t("groups.allowed_domain_invite_requirement_prefix") %>
-            <code><%= group_member.group.allowed_domain %></code>
-            <%= t("groups.allowed_domain_invite_requirement_suffix") %>
+            <%= t("groups.allowed_domain_invite_requirement_html", domain: sanitize(group_member.group.allowed_domain)) %>
           </div>
         <% end %>
         <%= form_with(model: group_member, local: true) do |form| %>

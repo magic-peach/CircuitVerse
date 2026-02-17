@@ -30,9 +30,7 @@
         <div class="alert alert-info mt-3">
           <i class="fas fa-info-circle"></i>
           <strong><%= t("groups.show.email_domain_restriction_label") %></strong>
-          <%= t("groups.show.only_users_with_domain_prefix") %>
-          <code><%= @group.allowed_domain %></code>
-          <%= t("groups.show.only_users_with_domain_suffix") %>
+          <%= t("groups.show.only_users_with_domain_html", domain: sanitize(@group.allowed_domain)) %>
         </div>
       <% end %>
     </div>
@@ -247,7 +245,7 @@
                   <%= assignment.deadline %>
                 </div>
                 <% if(assignment.deadline > Time.current) %>
-                  <p>(<%= t("groups.show.assignment.time_remaining, time_remaining: AssignmentDecorator.new(assignment).time_remaining") %>)</p>
+                  <p>(<%= t("groups.show.assignment.time_remaining_html", time_remaining: AssignmentDecorator.new(assignment).time_remaining) %>)</p>
                 <% end %>
               </td>
             </tr>
