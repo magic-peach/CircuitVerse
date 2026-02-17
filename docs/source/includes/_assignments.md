@@ -345,7 +345,7 @@ You can POST assignment in `/api/v1/groups/:group_id/assignments`. Authenticatio
 | Name            | Type                 | Description                                 |
 | --------------- | -------------------- | ------------------------------------------- |
 | `name`          | `String`             | Name of the Assignment                      |
-| `deadline`      | `String`             | Updated name of the group                   |
+| `deadline`      | `String`             | Deadline for the assignment                 |
 | `description`   | `String`             | Description of the assignment               |
 | `grading_scale` | `String`             | grading scale for the assignment            |
 | `restrictions`  | `JSON encoded array` | restrictions for assignments in json string |
