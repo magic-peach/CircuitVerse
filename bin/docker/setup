@@ -4,8 +4,7 @@
 rm -rf /circuitverse/tmp
 
 
-# Install ruby dependencies
-gem install bundler
+# Install ruby dependencies (bundler already installed in Dockerfile)
 bundle config set --local without "production"
 bundle config set --local path "/home/vendor/bundle"
 bundle install

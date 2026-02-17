@@ -55,5 +55,8 @@ RUN if [[ "$OPERATING_SYSTEM" == "linux" ]]; then \
     fi ; \
 fi
 
+# Install specific bundler version to match Gemfile.lock requirements
+RUN gem install bundler -v '~> 2.5'
+
 # Switch to non-root user
 USER ${NON_ROOT_USERNAME}

@@ -10,7 +10,8 @@ x-common-build: &common_build
       - NON_ROOT_GROUPNAME=${NON_ROOT_GROUPNAME}
   volumes:
     - .:/circuitverse:rw
-    - ./config/database.docker.yml:/circuitverse/config/database.yml:rw
+    # File mount causes issues on macOS Docker Desktop
+    # - ./config/database.docker.yml:/circuitverse/config/database.yml:rw
     - ruby_bundle:/home/vendor/bundle:rw
 
 services:
