@@ -16,7 +16,7 @@ RSpec.describe Api::V1::SimulatorController, type: :request do
       end
     end
 
-    context "when SLACK_ISSUE_HOOK_URL is present and returns reponse ok" do
+    context "when SLACK_ISSUE_HOOK_URL is present and returns response ok" do
       before do
         allow(ENV).to receive(:fetch).with("SLACK_ISSUE_HOOK_URL", nil).and_return("https://circuitverse.valid")
         stub_request(:post, "https://circuitverse.valid").to_return(status: 200, body: "", headers: {})
