@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_31_010356) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_11_185548) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -104,7 +104,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_010356) do
     t.string "lti_consumer_key"
     t.string "lti_shared_secret"
     t.jsonb "feature_restrictions", default: {}
+    t.bigint "lti_deployment_id"
+    t.integer "lti_version", default: 0, null: false
+    t.string "canvas_assignment_id"
     t.index ["group_id"], name: "index_assignments_on_group_id"
+    t.index ["lti_deployment_id"], name: "index_assignments_on_lti_deployment_id"
   end
 
   create_table "collaborations", force: :cascade do |t|
@@ -277,6 +281,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_010356) do
     t.integer "group_members_count"
     t.string "group_token"
     t.datetime "token_expires_at", precision: nil
+    t.string "allowed_domain"
     t.index ["group_token"], name: "index_groups_on_group_token", unique: true
     t.index ["primary_mentor_id"], name: "index_groups_on_primary_mentor_id"
   end
@@ -285,6 +290,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_010356) do
     t.text "data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "lti_deployments", force: :cascade do |t|
+    t.string "platform_id", null: false
+    t.string "deployment_id", null: false
+    t.string "client_id", null: false
+    t.string "issuer", null: false
+    t.string "jwks_url", null: false
+    t.string "access_token_url", null: false
+    t.string "auth_login_url", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["platform_id", "deployment_id"], name: "index_lti_deployments_unique", unique: true
   end
 
   create_table "mailkick_opt_outs", force: :cascade do |t|

@@ -66,6 +66,12 @@ class Assignment < ApplicationRecord
 
   def lti_integrated?
     lti_consumer_key.present? && lti_shared_secret.present?
+	belongs_to :lti_deployment, optional: true
+enum :lti_version, { v1_1: 0, v1_3: 1 }, prefix: :lti
+
+def lti_enabled?
+  lti_deployment.present?
+end
   end
 
   def project_order
