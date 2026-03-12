@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_12_215004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -90,6 +90,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "assignment_submissions", force: :cascade do |t|
+    t.bigint "assignment_id", null: false
+    t.bigint "project_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "subgroup_id"
+    t.integer "status", default: 0, null: false
+    t.float "score"
+    t.datetime "submitted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignment_id", "user_id"], name: "index_submissions_unique_per_user", unique: true
+    t.index ["assignment_id"], name: "index_assignment_submissions_on_assignment_id"
+    t.index ["project_id"], name: "index_assignment_submissions_on_project_id"
+    t.index ["subgroup_id"], name: "index_assignment_submissions_on_subgroup_id"
+    t.index ["user_id"], name: "index_assignment_submissions_on_user_id"
+  end
+
   create_table "assignments", force: :cascade do |t|
     t.string "name"
     t.datetime "deadline", null: false
@@ -107,6 +124,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
     t.bigint "lti_deployment_id"
     t.integer "lti_version", default: 0, null: false
     t.string "canvas_assignment_id"
+    t.integer "submission_type", default: 0, null: false
     t.index ["group_id"], name: "index_assignments_on_group_id"
     t.index ["lti_deployment_id"], name: "index_assignments_on_lti_deployment_id"
   end
@@ -282,7 +300,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
     t.string "group_token"
     t.datetime "token_expires_at", precision: nil
     t.string "allowed_domain"
+    t.bigint "parent_group_id"
     t.index ["group_token"], name: "index_groups_on_group_token", unique: true
+    t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
     t.index ["primary_mentor_id"], name: "index_groups_on_primary_mentor_id"
   end
 
@@ -436,6 +456,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
     t.index ["user_id"], name: "index_stars_on_user_id"
   end
 
+  create_table "subgroup_members", force: :cascade do |t|
+    t.bigint "subgroup_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "role", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subgroup_id", "user_id"], name: "index_subgroup_members_unique", unique: true
+    t.index ["subgroup_id"], name: "index_subgroup_members_on_subgroup_id"
+    t.index ["user_id"], name: "index_subgroup_members_on_user_id"
+  end
+
+  create_table "subgroups", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "group_id", null: false
+    t.integer "max_size"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "name"], name: "index_subgroups_unique_name_per_group", unique: true
+    t.index ["group_id"], name: "index_subgroups_on_group_id"
+  end
+
   create_table "submission_votes", force: :cascade do |t|
     t.bigint "contest_id"
     t.bigint "submission_id"
@@ -574,6 +615,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
   add_foreign_key "projects", "users", column: "author_id"
   add_foreign_key "stars", "projects"
   add_foreign_key "stars", "users"
+  add_foreign_key "subgroup_members", "subgroups"
+  add_foreign_key "subgroup_members", "users"
+  add_foreign_key "subgroups", "groups"
   add_foreign_key "submission_votes", "contests"
   add_foreign_key "submission_votes", "submissions"
   add_foreign_key "submission_votes", "users"

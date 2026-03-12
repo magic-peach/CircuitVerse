@@ -11,6 +11,23 @@ class Group < ApplicationRecord
   has_many :users, through: :group_members
 
   has_many :assignments, dependent: :destroy
+  # Multi-level hierarchy
+belongs_to :parent_group, class_name: "Group", optional: true
+has_many   :child_groups, class_name: "Group",
+           foreign_key: :parent_group_id, dependent: :destroy
+
+def root?
+  parent_group_id.nil?
+end
+
+def ancestors
+  return [] if root?
+  [parent_group] + parent_group.ancestors
+end
+
+def depth
+  ancestors.length
+end
   has_many :pending_invitations, dependent: :destroy
 
   after_commit :send_creation_mail, on: :create
@@ -39,9 +56,26 @@ class Group < ApplicationRecord
     email_domain == allowed_domain
   end
 
-  private
+  
+validate :no_circular_reference
+validate :max_depth_three
+private
 
     def extract_domain(email)
+
+	def no_circular_reference
+  return unless parent_group_id.present?
+  if parent_group_id == id ||
+     ancestors.map(&:id).include?(id)
+    errors.add(:parent_group, "cannot create circular reference")
+  end
+end
+
+def max_depth_three
+  if depth >= 3
+    errors.add(:parent_group, "maximum nesting depth is 3 levels")
+  end
+end
       return nil if email.blank?
 
       email_parts = email.split("@")

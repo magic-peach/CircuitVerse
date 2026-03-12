@@ -1,19 +1,15 @@
-class CreateAssignmentSubmissions < ActiveRecord::Migration[8.0]
+class CreateLtiAssignmentSubmissions < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def change
     create_table :assignment_submissions do |t|
       t.references :assignment, null: false,
-                   foreign_key: true,
                    index: { algorithm: :concurrently }
       t.references :project,    null: false,
-                   foreign_key: true,
                    index: { algorithm: :concurrently }
       t.references :user,       null: false,
-                   foreign_key: true,
                    index: { algorithm: :concurrently }
       t.references :subgroup,   null: true,
-                   foreign_key: true,
                    index: { algorithm: :concurrently }
       t.integer    :status,     null: false, default: 0
       t.float      :score,      null: true
