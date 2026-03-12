@@ -69,3 +69,72 @@ Tagging.create([{ tag_id: tag.id,
                   project_id: projects.second.id },
                 { tag_id: tag.id,
                   project_id: projects.third.id }])
+
+# ============================================================
+# GSoC 2026 Demo Data — Assignment Suite Features
+# ============================================================
+if Rails.env.development?
+  puts "Seeding GSoC demo data..."
+
+  mentor = User.first
+  group  = Group.first
+
+  if mentor && group
+    # Multi-level hierarchy
+    child_group = Group.find_or_create_by!(
+      name: "Section A — Digital Logic",
+      primary_mentor: mentor
+    ) do |g|
+      g.parent_group = group
+    end
+    puts "Created child group: #{child_group.name}"
+
+    # Subgroup
+    subgroup = Subgroup.find_or_create_by!(
+      name: "Team Alpha",
+      group: group
+    ) do |s|
+      s.max_size = 4
+    end
+    puts "Created subgroup: #{subgroup.name}"
+
+    # Circuit template
+    template = CircuitTemplate.find_or_create_by!(
+      name: "AND Gate Lab",
+      created_by: mentor
+    ) do |t|
+      t.description  = "Basic AND gate verification exercise"
+      t.circuit_data = {
+        components: [{ type: "AND", inputs: 2 }],
+        inputs:     [{ name: "A" }, { name: "B" }],
+        outputs:    [{ name: "Y" }]
+      }
+      t.public = true
+    end
+    puts "Created circuit template: #{template.name}"
+
+    # Test cases on first assignment
+    assignment = Assignment.first
+    if assignment
+      AssignmentTestCase.find_or_create_by!(
+        assignment:      assignment,
+        description:     "Both inputs HIGH → output HIGH",
+        input_pins:      { "A" => 1, "B" => 1 },
+        eected_output: { "Y" => 1 },
+        position:        1
+      )
+      AssignmentTestCase.find_or_create_by!(
+        assignment:      assignment,
+        description:     "Both inputs LOW → output LOW",
+        input_pins:      { "A" => 0, "B" => 0 },
+        expected_output: { "Y" => 0 },
+        position:        2
+      )
+      puts "Created 2 test cases on assignment: #{assignment.name}"
+    end
+
+    puts "GSoC demo data seeded successfully!"
+  else
+    puts "No users or groups found — sign up at localhost:3000 first"
+  end
+end
