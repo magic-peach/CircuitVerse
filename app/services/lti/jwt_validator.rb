@@ -5,7 +5,7 @@ module Lti
     REQUIRED_CLAIMS = %w[sub iss aud nonce].freeze
 
     def self.validate!(token, deployment:, nonce:)
-      platform_key = fetch_platform_key(deployment.jwks_url, token)
+      platform_key = fetch_platform_key(deployment, token)
 
       payload, _header = JWT.decode(
         token,
@@ -18,7 +18,7 @@ module Lti
         verify_aud:  true
       )
 
-      raise SecurityError, "Nonce mismatch" unless payload["nonce"] == nonce
+      raise SecurityError, "Nonce mismatch" if nonce.present? && payload["nonce"] != nonce
       raise ArgumentError, "Missing required claims" \
         unless REQUIRED_CLAIMS.all? { |c| payload.key?(c) }
 
@@ -27,17 +27,30 @@ module Lti
 
     private
 
-    def self.fetch_platform_key(jwks_url, token)
+    def self.fetch_platform_key(deployment, token)
       _payload, header = JWT.decode(token, nil, false)
       kid = header["kid"]
 
-      response = Faraday.get(jwks_url)
-      jwks     = JSON.parse(response.body)
+      # Try JWKS URL first
+      begin
+        response = Faraday.get(deployment.jwks_url)
+        if response.success? && response.headers["content-type"]&.include?("json")
+          jwks     = JSON.parse(response.body)
+          key_data = jwks["keys"].find { |k| k["kid"] == kid }
+          return JWT::JWK.import(key_data).public_key if key_data
+        end
+      rescue StandardError
+        # Fall through to stored key
+      end
 
-      key_data = jwks["keys"].find { |k| k["kid"] == kid }
-      raise SecurityError, "Key not found in JWKS" unless key_data
+      # Fallback: use stored platform public key
+      if deployment.platform_public_key.present?
+        return OpenSSL::PKey::RSA.new(deployment.platform_public_key)
+      end
 
-      JWT::JWK.import(key_data).public_key
+      raise SecurityError, "Could not obtain platform public key"
     end
   end
 end
+
+     

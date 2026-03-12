@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_11_185548) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_12_143001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -302,6 +302,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_11_185548) do
     t.string "auth_login_url", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "platform_public_key"
     t.index ["platform_id", "deployment_id"], name: "index_lti_deployments_unique", unique: true
   end
 
