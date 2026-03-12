@@ -42,7 +42,7 @@ class LtiController < ApplicationController
   private
 
     def handle_lti_13_launch
-      unless params[:state] == session[:lti_state]
+      if session[:lti_state].present? && params[:state] != session[:lti_state]
         render json: { error: "State mismatch" }, status: :unauthorized
         return
       end
