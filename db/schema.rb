@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_12_215004) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_12_220008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -107,6 +107,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_215004) do
     t.index ["user_id"], name: "index_assignment_submissions_on_user_id"
   end
 
+  create_table "assignment_test_cases", force: :cascade do |t|
+    t.bigint "assignment_id", null: false
+    t.string "description", null: false
+    t.jsonb "input_pins", default: {}, null: false
+    t.jsonb "expected_output", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignment_id"], name: "index_assignment_test_cases_on_assignment_id"
+  end
+
   create_table "assignments", force: :cascade do |t|
     t.string "name"
     t.datetime "deadline", null: false
@@ -125,8 +136,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_215004) do
     t.integer "lti_version", default: 0, null: false
     t.string "canvas_assignment_id"
     t.integer "submission_type", default: 0, null: false
+    t.bigint "circuit_template_id"
+    t.index ["circuit_template_id"], name: "index_assignments_on_circuit_template_id"
     t.index ["group_id"], name: "index_assignments_on_group_id"
     t.index ["lti_deployment_id"], name: "index_assignments_on_lti_deployment_id"
+  end
+
+  create_table "circuit_templates", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.jsonb "circuit_data", default: {}, null: false
+    t.bigint "created_by_id", null: false
+    t.boolean "public", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_circuit_templates_on_created_by_id"
   end
 
   create_table "collaborations", force: :cascade do |t|
@@ -587,6 +611,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_215004) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "assignment_test_cases", "assignments"
   add_foreign_key "assignments", "groups"
   add_foreign_key "collaborations", "projects"
   add_foreign_key "collaborations", "users"
