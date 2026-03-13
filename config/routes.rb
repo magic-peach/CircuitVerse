@@ -27,8 +27,12 @@ Rails.application.routes.draw do
 
   # resources :assignment_submissions
   resources :group_members, only: %i[create destroy update]
+  resources :subgroup_members, only: %i[create destroy]
+resources :circuit_templates, only: %i[index show create destroy]
+resources :assignment_test_cases, only: %i[index create destroy]
   resources :groups, except: %i[index] do
     resources :assignments, except: %i[index]
+    resources :subgroups, only: %i[index create show destroy]
     member do
       get "invite/:token", to: "groups#group_invite", as: "invite"
       put :generate_token
