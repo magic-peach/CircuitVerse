@@ -202,6 +202,11 @@ Rails.application.routes.draw do
       get "/projects/search", to: "projects#search"
       post "/simulator/post_issue", to: "simulator#post_issue"
       post "/simulator/verilogcv", to: "simulator#verilog_cv"
+      resources :circuit_templates,     only: [:index, :show, :create]
+resources :assignment_test_cases, only: [:index, :create, :destroy]
+resources :subgroups, only: [:index, :create, :show] do
+  resources :subgroup_members, only: [:create, :destroy]
+end
       resources :projects, only: %i[index show create update destroy] do
         collection do
           patch :update_circuit, path: "update_circuit"
