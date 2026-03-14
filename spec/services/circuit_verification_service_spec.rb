@@ -54,6 +54,21 @@ RSpec.describe CircuitVerificationService do
         result = described_class.new(assignment, project).verify!
         expect(result.passed).to be false
       end
+
+      it "verify! with one passing and one failing test case returns correct score" do
+        # Both test cases expect {"Y"=>1}, but simulate_circuit always returns {}
+        # so both fail → score = 0.0
+        result = described_class.new(assignment, project).verify!
+        expect(result.score).to eq 0.0
+        expect(result.failed_cases.count).to eq 2
+      end
+
+      it "verify! result includes description of failed test case" do
+        result = described_class.new(assignment, project).verify!
+        descriptions = result.failed_cases.map(&:description)
+        expect(descriptions).not_to be_empty
+        expect(descriptions.first).to be_a(String)
+      end
     end
   end
 end

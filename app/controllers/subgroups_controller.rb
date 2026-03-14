@@ -5,17 +5,18 @@ class SubgroupsController < ApplicationController
   before_action :set_group
 
   def index
-    @subgroups = @group.subgroups
+    @subgroups = @group.subgroups.includes(subgroup_members: :user)
   end
 
   def show
-    @subgroup = @group.subgroups.find(params[:id])
+    @subgroup    = @group.subgroups.includes(subgroup_members: :user).find(params[:id])
+    @assignments = @group.assignments.includes(:assignment_submissions)
   end
 
   def create
     @subgroup = @group.subgroups.build(subgroup_params)
     if @subgroup.save
-      redirect_to group_path(@group), notice: "Subgroup created successfully."
+      redirect_to group_path(@group), notice: "Team created successfully."
     else
       redirect_to group_path(@group), alert: @subgroup.errors.full_messages.join(", ")
     end
@@ -24,7 +25,7 @@ class SubgroupsController < ApplicationController
   def destroy
     @subgroup = @group.subgroups.find(params[:id])
     @subgroup.destroy
-    redirect_to group_path(@group), notice: "Subgroup deleted."
+    redirect_to group_path(@group), notice: "Team removed."
   end
 
   private
