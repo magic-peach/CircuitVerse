@@ -2,6 +2,7 @@
 
 # rubocop:disable Metrics/BlockLength
 Rails.application.routes.draw do
+  get "/gsoc-demo", to: "gsoc_demo#index", as: :gsoc_demo
   mount SimpleDiscussion::Engine => "/forum", constraints: -> { Flipper.enabled?(:forum) }
   authenticate :user, ->(u) { u.admin? } do
     mount Avo::Engine, at: "/admin"
@@ -28,11 +29,19 @@ Rails.application.routes.draw do
   # resources :assignment_submissions
   resources :group_members, only: %i[create destroy update]
   resources :subgroup_members, only: %i[create destroy]
-resources :circuit_templates, only: %i[index show create destroy]
-resources :assignment_test_cases, only: %i[index create destroy]
+resources :circuit_templates do
+    resources :assignment_test_cases, only: [:create, :destroy]
+  end
+  resources :assignment_test_cases, only: %i[index create destroy]
   resources :groups, except: %i[index] do
     resources :assignments, except: %i[index]
-    resources :subgroups, only: %i[index create show destroy]
+    resources :subgroups, only: %i[index create show destroy] do
+      resources :subgroup_members, only: [:create, :destroy] do
+        member do
+          patch :promote
+        end
+      end
+    end
     member do
       get "invite/:token", to: "groups#group_invite", as: "invite"
       put :generate_token
@@ -206,11 +215,12 @@ resources :assignment_test_cases, only: %i[index create destroy]
       get "/projects/search", to: "projects#search"
       post "/simulator/post_issue", to: "simulator#post_issue"
       post "/simulator/verilogcv", to: "simulator#verilog_cv"
-      resources :circuit_templates,     only: [:index, :show, :create]
-resources :assignment_test_cases, only: [:index, :create, :destroy]
-resources :subgroups, only: [:index, :create, :show] do
-  resources :subgroup_members, only: [:create, :destroy]
-end
+      resources :circuit_templates,      only: [:index, :show, :create]
+      resources :assignment_test_cases,  only: [:index, :create, :destroy]
+      resources :subgroups, only: [:index, :create, :show] do
+        resources :subgroup_members, only: [:create, :destroy]
+      end
+      resources :assignment_submissions, only: [:index, :show, :update]
       resources :projects, only: %i[index show create update destroy] do
         collection do
           patch :update_circuit, path: "update_circuit"

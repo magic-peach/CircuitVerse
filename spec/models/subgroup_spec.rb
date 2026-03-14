@@ -26,6 +26,21 @@ RSpec.describe Subgroup, type: :model do
     end
   end
 
+  describe "associations" do
+    it "belongs to a group" do
+      subgroup = create(:subgroup, group: group)
+      expect(subgroup.group).to eq group
+    end
+
+    it "subgroup_members can have lead role" do
+      subgroup = create(:subgroup, group: group)
+      user     = create(:user)
+      create(:group_member, user: user, group: group)
+      member   = subgroup.subgroup_members.create!(user: user, role: :lead)
+      expect(member.role_lead?).to be true
+    end
+  end
+
   describe "#full?" do
     it "returns false when no max_size set" do
       subgroup = create(:subgroup, group: group, max_size: nil)
@@ -34,6 +49,22 @@ RSpec.describe Subgroup, type: :model do
 
     it "returns false when under max_size" do
       subgroup = create(:subgroup, group: group, max_size: 4)
+      expect(subgroup.full?).to be false
+    end
+
+    it "returns true when member count equals max_size" do
+      subgroup = create(:subgroup, group: group, max_size: 1)
+      user     = create(:user)
+      create(:group_member, user: user, group: group)
+      subgroup.subgroup_members.create!(user: user, role: :member)
+      expect(subgroup.full?).to be true
+    end
+
+    it "subgroup with no max_size is never full?" do
+      subgroup = create(:subgroup, group: group, max_size: nil)
+      user     = create(:user)
+      create(:group_member, user: user, group: group)
+      subgroup.subgroup_members.create!(user: user, role: :member)
       expect(subgroup.full?).to be false
     end
   end

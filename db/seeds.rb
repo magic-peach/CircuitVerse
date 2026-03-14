@@ -118,22 +118,99 @@ if Rails.env.development?
     if assignment
       AssignmentTestCase.find_or_create_by!(
         assignment:      assignment,
-        description:     "Both inputs HIGH → output HIGH",
-        input_pins:      { "A" => 1, "B" => 1 },
-        eected_output: { "Y" => 1 },
-        position:        1
-      )
+        description:     "Both inputs HIGH → output HIGH"
+      ) do |tc|
+        tc.input_pins      = { "A" => 1, "B" => 1 }
+        tc.expected_output = { "Y" => 1 }
+        tc.position        = 1
+      end
       AssignmentTestCase.find_or_create_by!(
         assignment:      assignment,
-        description:     "Both inputs LOW → output LOW",
-        input_pins:      { "A" => 0, "B" => 0 },
-        expected_output: { "Y" => 0 },
-        position:        2
-      )
+        description:     "Both inputs LOW → output LOW"
+      ) do |tc|
+        tc.input_pins      = { "A" => 0, "B" => 0 }
+        tc.expected_output = { "Y" => 0 }
+        tc.position        = 2
+      end
       puts "Created 2 test cases on assignment: #{assignment.name}"
     end
 
-    puts "GSoC demo data seeded successfully!"
+    # Assignments
+    assignment1 = Assignment.find_or_create_by!(
+      name:  "AND Gate Lab",
+      group: group
+    ) do |a|
+      a.deadline         = 4.weeks.from_now
+      a.status           = "open"
+      a.grading_scale    = :percent
+      a.circuit_template = template
+    end
+    puts "Created assignment: #{assignment1.name}"
+
+    assignment2 = Assignment.find_or_create_by!(
+      name:  "OR Gate Exercise",
+      group: group
+    ) do |a|
+      a.deadline      = 2.weeks.from_now
+      a.status        = "open"
+      a.grading_scale = :no_scale
+    end
+    puts "Created assignment: #{assignment2.name}"
+
+    # Test cases on assignment 1
+    AssignmentTestCase.find_or_create_by!(
+      assignment:  assignment1,
+      description: "Both inputs HIGH → output HIGH"
+    ) do |tc|
+      tc.input_pins      = { "A" => 1, "B" => 1 }
+      tc.expected_output = { "Y" => 1 }
+      tc.position        = 1
+    end
+
+    AssignmentTestCase.find_or_create_by!(
+      assignment:  assignment1,
+      description: "Both inputs LOW → output LOW"
+    ) do |tc|
+      tc.input_pins      = { "A" => 0, "B" => 0 }
+      tc.expected_output = { "Y" => 0 }
+      tc.position        = 2
+    end
+
+    AssignmentTestCase.find_or_create_by!(
+      assignment:  assignment1,
+      description: "A HIGH, B LOW → output LOW"
+    ) do |tc|
+      tc.input_pins      = { "A" => 1, "B" => 0 }
+      tc.expected_output = { "Y" => 0 }
+      tc.position        = 3
+    end
+    puts "Created 3 test cases on assignment: #{assignment1.name}"
+
+    # Submission
+    student = User.find_by(email: "user2@circuitverse.org")
+    if student
+      student_project = Project.find_or_create_by!(
+        name:   "#{student.name}/#{assignment1.name}",
+        author: student
+      ) do |p|
+        p.project_access_type = "Private"
+        p.description         = "Student submission for AND Gate Lab"
+        p.assignment          = assignment1
+      end
+
+      AssignmentSubmission.find_or_create_by!(
+        assignment: assignment1,
+        user:       student,
+        project:    student_project
+      ) do |s|
+        s.status       = :submitted
+        s.submitted_at = Time.zone.now
+        s.score        = 66.67
+      end
+      puts "Created submission for #{student.name}"
+    end
+
+    puts "Classroom data seeded successfully!"
   else
     puts "No users or groups found — sign up at localhost:3000 first"
   end

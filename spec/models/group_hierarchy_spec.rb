@@ -42,5 +42,23 @@ RSpec.describe Group, type: :model do
       great      = build(:group,  primary_mentor: mentor, parent_group: grandchild)
       expect(great).not_to be_valid
     end
+
+    it "depth returns correct value for 3-level nesting" do
+      child      = create(:group, primary_mentor: mentor, parent_group: parent)
+      grandchild = create(:group, primary_mentor: mentor, parent_group: child)
+      expect(grandchild.depth).to eq 2
+    end
+
+    it "ancestors returns full chain for grandchild" do
+      child      = create(:group, primary_mentor: mentor, parent_group: parent)
+      grandchild = create(:group, primary_mentor: mentor, parent_group: child)
+      expect(grandchild.ancestors).to eq [child, parent]
+    end
+
+    it "child_groups association works bidirectionally" do
+      child = create(:group, primary_mentor: mentor, parent_group: parent)
+      expect(parent.child_groups).to include(child)
+      expect(child.parent_group).to eq parent
+    end
   end
 end

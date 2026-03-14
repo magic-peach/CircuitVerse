@@ -1,0 +1,173 @@
+<% content_for :title, @subgroup.name %>
+
+<div class="container">
+  <div class="row center-row">
+    <div class="col">
+      <h1 class="submain-heading"><%= @subgroup.name %></h1>
+      <h4 class="group-mentor-heading">Team in <%= link_to @group.name, group_path(@group) %></h4>
+      <% if @subgroup.full? %>
+        <span class="badge bg-danger">Full</span>
+      <% else %>
+        <span class="badge bg-success">Open</span>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── MEMBERS ─────────────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-3">
+    <h3 class="mb-0">Members</h3>
+    <% if current_user && @group.primary_mentor_id == current_user.id %>
+      <button type="button" class="btn primary-button groups-primary-button"
+              data-bs-toggle="modal" data-bs-target="#addSubgroupMemberModal">
+        Add Member
+      </button>
+    <% end %>
+  </div>
+  <hr>
+
+  <% if @subgroup.subgroup_members.empty? %>
+    <span class="null-text">This team has no members yet.</span>
+  <% else %>
+    <div class="groups-members-scroll-row row">
+      <% @subgroup.subgroup_members.includes(:user).each do |member| %>
+        <div class="groups-members-card-container">
+          <div class="groups-members-card">
+            <div class="row">
+              <div class="groups-members-card-details col">
+                <span class="groups-members-card-avatar">
+                  <% if member.user.profile_picture.present? %>
+                    <%= link_to image_tag(member.user.profile_picture.url,
+                        alt: member.user.name, title: member.user.name), user_path(member.user) %>
+                  <% else %>
+                    <i class="fa fa-user default-profile-icon"></i>
+                  <% end %>
+                </span>
+                <div class="groups-members-card-name-container">
+                  <span class="tooltiptext"><%= member.user.name %></span>
+                  <%= link_to member.user.name, user_path(member.user),
+                      class: "groups-members-card-name", title: "View profile of #{member.user.name}" %>
+                </div>
+                <% if member.role_lead? %>
+                  <span class="badge bg-warning text-dark ms-1" style="font-size: 0.72rem;">Lead</span>
+                <% end %>
+                <% if current_user && @group.primary_mentor_id == current_user.id %>
+                  <p class="groups-members-card-email" title="<%= member.user.email %>">
+                    <%= member.user.email %>
+                  </p>
+                <% end %>
+              </div>
+              <% if current_user && @group.primary_mentor_id == current_user.id %>
+                <div class="group-member-button-container col-auto">
+                  <div class="groups-mentor-card-mini-buttons">
+                    <%= link_to "Remove",
+                        group_subgroup_subgroup_member_path(@group, @subgroup, member),
+                        method: :delete,
+                        data: { confirm: "Remove #{member.user.name} from this team?" },
+                        class: "mini-button groups-delete-mini-button" %>
+                    <% unless member.role_lead? %>
+                      <%= button_to "Make Lead",
+                          promote_group_subgroup_subgroup_member_path(@group, @subgroup, member),
+                          method: :patch,
+                          data: { confirm: "Make #{member.user.name} the team lead?" },
+                          class: "mini-button groups-reopen-mini-button" %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── ASSIGNMENTS ─────────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+    <h3 class="mb-0">Assignments</h3>
+  </div>
+  <hr>
+
+  <% if @assignments.empty? %>
+    <span class="null-text">No assignments for this classroom yet.</span>
+  <% else %>
+    <table class="table table-borderless groups-table">
+      <thead class="groups-table-heading">
+        <tr>
+          <th>Name</th>
+          <th>Due Date</th>
+          <th>Type</th>
+          <th>Team Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @assignments.each do |a| %>
+          <tr class="groups-table-rows">
+            <td><%= a.name %></td>
+            <td>
+              <% if a.deadline %>
+                <%= a.deadline.strftime("%b %d, %Y") %>
+              <% else %>
+                <span class="null-text">&mdash;</span>
+              <% end %>
+            </td>
+            <td>
+              <span class="badge <%= a.submission_individual? ? 'bg-primary' : 'bg-warning text-dark' %>">
+                <%= a.submission_individual? ? "Individual" : "Group" %>
+              </span>
+            </td>
+            <td>
+              <% team_sub = a.assignment_submissions.find { |s| s.subgroup_id == @subgroup.id } %>
+              <% if team_sub %>
+                <% status_class = { "draft" => "bg-secondary", "submitted" => "bg-primary", "graded" => "bg-success" }[team_sub.status] || "bg-secondary" %>
+                <span class="badge <%= status_class %>"><%= team_sub.status.capitalize %></span>
+                <% if team_sub.score.present? %>
+                  &nbsp;<small><%= number_with_precision(team_sub.score, precision: 1) %>%</small>
+                <% end %>
+              <% else %>
+                <span class="null-text groups-no-assignment-submission-text">Not submitted</span>
+              <% end %>
+            </td>
+            <td>
+              <%= link_to "View", group_assignment_path(@group, a), class: "mini-button groups-view-mini-button" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <div class="row mt-4">
+    <div class="col-12">
+      <%= link_to "Back", :back, class: "anchor-text" %>
+    </div>
+  </div>
+</div>
+
+<%# ── ADD MEMBER MODAL ────────────────────────────────────────── %>
+<% if current_user && @group.primary_mentor_id == current_user.id %>
+  <div class="modal fade" id="addSubgroupMemberModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog primary-modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header primary-modal-header">
+          <h5 class="modal-title">Add Team Member</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <%= form_with url: group_subgroup_subgroup_members_path(@group, @subgroup), method: :post do |f| %>
+            <div class="mb-3">
+              <%= label_tag :user_id, "Select Member", class: "form-label" %>
+              <%= select_tag :user_id,
+                  options_from_collection_for_select(@group.users, :id, :name),
+                  class: "form-control form-input", prompt: "Choose a classroom member..." %>
+            </div>
+            <div class="text-end">
+              <button type="button" class="btn mini-button groups-close-mini-button" data-bs-dismiss="modal">Cancel</button>
+              <%= submit_tag "Add Member", class: "btn primary-button" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

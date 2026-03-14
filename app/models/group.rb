@@ -13,6 +13,7 @@ class Group < ApplicationRecord
   has_many :users, through: :group_members
   has_many :assignments, dependent: :destroy
   has_many :pending_invitations, dependent: :destroy
+  has_many :subgroups, dependent: :destroy
 
   # Multi-level hierarchy
   belongs_to :parent_group, class_name: "Group", optional: true

@@ -1,0 +1,126 @@
+<% content_for :title, "Subgroups — #{@group.name}" %>
+<div class="container">
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible">
+      <a href="#" class="btn-close" data-bs-dismiss="alert"></a>
+      <h6><%= notice %></h6>
+    </div>
+  <% end %>
+
+  <% if alert %>
+    <div class="alert alert-danger alert-dismissible">
+      <a href="#" class="btn-close" data-bs-dismiss="alert"></a>
+      <h6><%= alert %></h6>
+    </div>
+  <% end %>
+
+  <!-- Header -->
+  <div class="row center-row">
+    <div class="col">
+      <h1 class="submain-heading">
+        <%= @group.name %> — Subgroups
+      </h1>
+      <p class="text-muted">
+        <%= link_to "← Back to Group", group_path(@group) %>
+      </p>
+    </div>
+  </div>
+
+  <!-- Group Hierarchy -->
+  <% if @group.parent_group.present? %>
+    <div class="alert alert-info">
+      <strong>Parent Group:</strong>
+      <%= link_to @group.parent_group.name, group_path(@group.parent_group) %>
+  saquo; <strong><%= @group.name %></strong>
+      &nbsp;|&nbsp; Depth: <%= @group.depth %>
+    </div>
+  <% end %>
+
+  <% if @group.child_groups.any? %>
+    <div class="alert alert-secondary">
+      <strong>Child Groups:</strong>
+      <% @group.child_groups.each do |child| %>
+        <%= link_to child.name, group_subgroups_path(child), class: "badge bg-secondary text-decoration-none me-1" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Create Subgroup -->
+  <% if policy(@group).admin_access? %>
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Create New Subgroup</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: group_subgroups_path(@group), method: :post do |f| %>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= f.label :name, "Subgroup Name", class: "form-label" %>
+              <%= f.text_field :name, class: "form-control",
+                  placeholder: "e.g. Team Alpha",
+                  name: "subgroup[name]" %>
+            </div>
+            <div class="col-md-3">
+              <%= f.label :max_size, "Max Members", class: "form-label" %>
+              <%= f.number_field :max_size, class: "form-control",
+                  placeholder: "Leave blank for unlimited",
+                  min: 1,
+                  name: "subgroup[max_size]" %>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <%= f.submit "Create Subgroup", class: "btn primary-button w-100" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Subgroups List -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 class="mb-0">Subgroups (<%= @subgroups.count %>)</h3>
+  </div>
+  <hr>
+
+  <% if @subgroups.empty? %>
+    <p class="null-text">No subgroups yet. Create one above.</p>
+  <% else %>
+    <div class="row">
+      <% @subgroups.each do |subgroup| %>
+        <div class="col-md-4 mb-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title"><%= subgroup.name %></h5>
+              <p class="card-text text-muted">
+                <% member_count = subgroup.subgroup_members.count %>
+                <% if subgroup.max_size %>
+                  <%= member_count %> / <%= subgroup.max_size %> members
+                  <% if subgroup.full? %>
+                    <span class="badge bg-danger ms-1">Full</span>
+                  <% else %>
+                    <span class="badge bg-success ms-1">Open</span>
+                  <% end %>
+                <% else %>
+                  <%= member_count %> members
+                <% end %>
+              </p>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+              <%= link_to "View", group_subgroup_path(@group, subgroup),
+                  class: "btn btn-sm btn-outline-primary" %>
+              <% if policy(@group).admin_access? %>
+                <%= link_to "Delete",
+                    group_subgroup_path(@group, subgroup),
+                    method: :delete,
+                    data: { confirm: "Delete #{subgroup.name}?" },
+                    class: "btn btn-sm btn-outline-danger" %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+</div>

@@ -5,6 +5,7 @@
 import { application } from './application';
 
 import AssignmentController from './assignment_controller';
+import JsonValidatorController from './json_validator_controller';
 import ContestController from './contest_controller';
 import ExploreController from './explore_controller';
 import GroupsController from './groups_controller';
@@ -15,6 +16,7 @@ import SearchSortingController from './search_sorting_controller';
 import SearchFiltersController from './search_filters_controller';
 
 application.register('assignment', AssignmentController);
+application.register('json-validator', JsonValidatorController);
 application.register('contest', ContestController);
 application.register('explore', ExploreController);
 application.register('groups', GroupsController);

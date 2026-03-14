@@ -1,0 +1,97 @@
+<% content_for :title, "Circuit Library" %>
+
+<div class="container" style="padding-top: 30px; padding-bottom: 60px;">
+  <div class="row center-row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h1 class="submain-heading">Circuit Library</h1>
+          <h4 class="group-mentor-heading">Reusable starting points for your assignments</h4>
+        </div>
+        <% if user_signed_in? %>
+          <%= link_to "New Template", new_circuit_template_path, class: "btn primary-button" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-3 mb-4">
+    <div class="col-12">
+      <ul class="nav nav-tabs">
+        <li class="nav-item">
+          <%= link_to "All Templates", circuit_templates_path,
+              class: "nav-link #{"active" if params[:scope].blank?}" %>
+        </li>
+        <% if user_signed_in? %>
+          <li class="nav-item">
+            <%= link_to "My Templates", circuit_templates_path(scope: "mine"),
+                class: "nav-link #{"active" if params[:scope] == "mine"}" %>
+          </li>
+        <% end %>
+        <li class="nav-item">
+          <%= link_to "Public", circuit_templates_path(scope: "public"),
+              class: "nav-link #{"active" if params[:scope] == "public"}" %>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <% if @templates.empty? %>
+    <div class="text-center py-5">
+      <p class="null-text">No templates found.</p>
+      <% if user_signed_in? %>
+        <%= link_to "Create your first template", new_circuit_template_path, class: "btn primary-button mt-3" %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="row">
+      <% @templates.each do |t| %>
+        <div class="col-md-4 mb-4">
+          <div class="groups-table-rows" style="padding: 15px; height: 100%;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <strong style="font-size: 1.05rem;"><%= t.name %></strong>
+              <span class="badge <%= t.public ? 'bg-success' : 'bg-secondary' %>">
+                <%= t.public ? "Public" : "Private" %>
+              </span>
+            </div>
+            <p class="null-text" style="font-size: 0.82rem; margin: 2px 0 6px;">
+              by <%= t.created_by.name %>
+            </p>
+            <p style="font-size: 0.85rem; color: #555; margin-bottom: 8px;">
+              <% if t.description.present? %>
+                <%= truncate(t.description, length: 100) %>
+              <% else %>
+                <em class="null-text">No description added yet.</em>
+              <% end %>
+            </p>
+            <div class="mb-2">
+              <% if t.circuit_data.is_a?(Hash) %>
+                <% t.circuit_data.each_key do |key| %>
+                  <span class="badge bg-light text-dark border me-1" style="font-size: 0.72rem;"><%= key %></span>
+                <% end %>
+              <% end %>
+            </div>
+            <p style="font-size: 0.8rem; color: #666;">
+              <% tc_count = t.assignment_test_cases.count %>
+              <% if tc_count > 0 %>
+                <%= tc_count %> test <%= "case".pluralize(tc_count) %>
+              <% else %>
+                <em class="null-text">No test cases</em>
+              <% end %>
+            </p>
+            <div class="mt-2">
+              <%= link_to "View", circuit_template_path(t), class: "mini-button groups-view-mini-button" %>
+              <% if user_signed_in? && t.created_by_id == current_user.id %>
+                <%= link_to "Edit", edit_circuit_template_path(t), class: "mini-button groups-reopen-mini-button" %>
+                <%= link_to "Delete", circuit_template_path(t),
+                    method: :delete,
+                    data: { confirm: "Are you sure you want to delete this template?" },
+                    class: "mini-button groups-delete-mini-button" %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

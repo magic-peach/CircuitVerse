@@ -1,0 +1,284 @@
+<% content_for :title, "My Classrooms" %>
+
+<div class="container" style="padding-top: 30px; padding-bottom: 60px;">
+
+  <%# ── CLASSROOMS ─────────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 class="mb-0">Classrooms</h3>
+    <%= link_to "New Classroom", new_group_path, class: "btn primary-button" %>
+  </div>
+  <hr>
+
+  <% if @root_groups.empty? %>
+    <span class="null-text">No classrooms yet. Create your first classroom to get started.</span>
+  <% else %>
+    <% @root_groups.each do |g| %>
+      <div class="groups-table-rows row align-items-center" style="padding: 15px 20px;">
+        <div class="col-md-7">
+          <strong><%= link_to g.name, group_path(g) %></strong>
+          <% if g.primary_mentor.present? %>
+            <h4 class="group-mentor-heading d-inline ms-2">
+              <%= g.primary_mentor.name %>
+            </h4>
+          <% end %>
+          <div class="mt-1" style="font-size: 0.85rem; color: #666;">
+            <%= g.users.count %> members &nbsp;&middot;&nbsp;
+            <span class="badge bg-secondary">Level 1</span>
+          </div>
+        </div>
+        <div class="col-md-5 text-end">
+          <%= link_to "View", group_path(g), class: "mini-button groups-view-mini-button" %>
+          <% if current_user && g.primary_mentor_id == current_user.id %>
+            <%= link_to "Edit", edit_group_path(g), class: "mini-button groups-reopen-mini-button" %>
+          <% end %>
+        </div>
+
+        <% if g.child_groups.any? %>
+          <div class="col-12 mt-2">
+            <a class="anchor-text" style="font-size:0.85rem; cursor:pointer;"
+               data-bs-toggle="collapse"
+               href="#subclassrooms-<%= g.id %>"
+               aria-expanded="false">
+              Show sub-classrooms (<%= g.child_groups.count %>)
+            </a>
+            <div class="collapse ms-4 mt-2" id="subclassrooms-<%= g.id %>">
+              <% g.child_groups.each do |child| %>
+                <div class="groups-table-rows row align-items-center mb-1" style="padding: 8px 15px;">
+                  <div class="col-8">
+                    <%= link_to child.name, group_path(child) %>
+                    <span class="badge bg-light text-dark ms-1">Level 2</span>
+                    <small class="null-text ms-2"><%= child.users.count %> members</small>
+                  </div>
+                  <div class="col-4 text-end">
+                    <%= link_to "View", group_path(child), class: "mini-button groups-view-mini-button" %>
+                  </div>
+                  <% child.child_groups.each do |gc| %>
+                    <div class="col-12 ms-4 mt-1" style="font-size: 0.85rem;">
+                      <%= gc.name %>
+                      <span class="badge bg-light text-dark ms-1">Level 3</span>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# ── TEAMS ──────────────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-5">
+    <h3 class="mb-0">Teams</h3>
+  </div>
+  <hr>
+
+  <% if @subgroups.empty? %>
+    <span class="null-text">No teams have been formed yet.</span>
+  <% else %>
+    <div class="groups-members-scroll-row row">
+      <% @subgroups.each do |sg| %>
+        <div class="groups-members-card-container">
+          <div class="groups-members-card" style="height: auto; width: 320px;">
+            <div class="row pt-3">
+              <div class="col-12">
+                <strong><%= link_to sg.name, group_subgroup_path(sg.group, sg), class: "groups-members-card-name" %></strong>
+                <p class="null-text" style="font-size: 0.82rem; margin: 2px 0;"><%= sg.group.name %></p>
+                <span class="badge <%= sg.full? ? 'bg-danger' : 'bg-success' %> ms-0 mt-1">
+                  <%= sg.subgroup_members.count %><%= sg.max_size ? "/#{sg.max_size}" : "" %>
+                  &nbsp;<%= sg.full? ? "Full" : "Open" %>
+                </span>
+              </div>
+              <div class="col-12 mt-2" style="font-size: 0.82rem;">
+                <% lead = sg.subgroup_members.find(&:role_lead?) %>
+                <% visible = sg.subgroup_members.first(3) %>
+                <% visible.each do |m| %>
+                  <i class="fa fa-user me-1"></i>
+                  <%= m.role_lead? ? content_tag(:span, "Lead", class: "badge bg-warning text-dark me-1") : "" %>
+                <% end %>
+                <% overflow = sg.subgroup_members.count - visible.count %>
+                <% if overflow > 0 %>
+                  <small class="null-text">+<%= overflow %> more</small>
+                <% end %>
+              </div>
+              <div class="col-12">
+                <%= link_to "View Team", group_subgroup_path(sg.group, sg), class: "mini-button groups-view-mini-button" %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── ASSIGNMENTS ─────────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-5">
+    <h3 class="mb-0">Assignments</h3>
+  </div>
+  <hr>
+
+  <% if @assignments.empty? %>
+    <span class="null-text">No assignments have been created yet.</span>
+  <% else %>
+    <table class="table table-borderless groups-table">
+      <thead class="groups-table-heading">
+        <tr>
+          <th>Name</th>
+          <th>Classroom</th>
+          <th>Due Date</th>
+          <th>Type</th>
+          <th>Canvas</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @assignments.each do |a| %>
+          <tr class="groups-table-rows">
+            <td><strong><%= link_to a.name, group_assignment_path(a.group, a) %></strong></td>
+            <td><%= a.group.name %></td>
+            <td>
+              <% if a.deadline %>
+                <%= a.deadline.strftime("%b %d, %Y") %>
+              <% else %>
+                <span class="null-text">&mdash;</span>
+              <% end %>
+            </td>
+            <td>
+              <span class="badge <%= a.submission_individual? ? 'bg-primary' : 'bg-warning text-dark' %>">
+                <%= a.submission_individual? ? "Individual" : "Group" %>
+              </span>
+            </td>
+            <td>
+              <% if a.lti_enabled? %>
+                <span class="badge bg-success">Connected</span>
+              <% else %>
+                <span class="null-text">&mdash;</span>
+              <% end %>
+            </td>
+            <td>
+              <%= link_to "View", group_assignment_path(a.group, a), class: "mini-button groups-view-mini-button" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @submissions.any? %>
+      <h5 class="mt-4">Recent Submissions</h5>
+      <table class="table table-borderless groups-table">
+        <thead class="groups-table-heading">
+          <tr>
+            <th>Student</th>
+            <th>Assignment</th>
+            <th>Status</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @submissions.each do |s| %>
+            <tr class="groups-table-rows">
+              <td><%= s.user.name %></td>
+              <td><%= s.assignment.name %></td>
+              <td>
+                <% status_class = { "draft" => "bg-secondary", "submitted" => "bg-primary", "graded" => "bg-success" }[s.status] || "bg-secondary" %>
+                <span class="badge <%= status_class %>"><%= s.status.capitalize %></span>
+              </td>
+              <td>
+                <% if s.score.present? %>
+                  <%= number_with_precision(s.score, precision: 1) %>%
+                <% else %>
+                  <span class="null-text">Pending</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  <% end %>
+
+  <%# ── CIRCUIT LIBRARY ─────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-5">
+    <h3 class="mb-0">Circuit Library</h3>
+    <%= link_to "Browse Library", circuit_templates_path, class: "btn primary-button" %>
+  </div>
+  <hr>
+
+  <% if @templates.empty? %>
+    <span class="null-text">No circuit templates yet.</span>
+  <% else %>
+    <div class="row">
+      <% @templates.each do |t| %>
+        <div class="col-md-6">
+          <div class="groups-table-rows" style="padding: 15px; margin-bottom: 15px;">
+            <div class="d-flex justify-content-between align-items-start">
+              <strong><%= t.name %></strong>
+              <span class="badge <%= t.public ? 'bg-success' : 'bg-secondary' %>">
+                <%= t.public ? "Public" : "Private" %>
+              </span>
+            </div>
+            <% if t.description.present? %>
+              <p style="font-size: 0.85rem; color: #666; margin: 6px 0;">
+                <%= truncate(t.description, length: 100) %>
+              </p>
+            <% end %>
+            <small class="null-text">
+              <%= t.assignment_test_cases.count %> test cases
+            </small>
+            <div class="mt-2">
+              <%= link_to "Use in Assignment", circuit_template_path(t), class: "mini-button groups-view-mini-button" %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── LMS INTEGRATION ─────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-5">
+    <h3 class="mb-0">LMS Integration</h3>
+  </div>
+  <hr>
+
+  <% if @lti_deployments.empty? %>
+    <span class="null-text">No LMS platforms connected. Contact your administrator to configure Canvas integration.</span>
+  <% else %>
+    <div class="groups-members-scroll-row row">
+      <% @lti_deployments.each do |d| %>
+        <div class="groups-members-card-container">
+          <div class="groups-members-card" style="height: auto; width: 320px;">
+            <div class="row pt-3">
+              <div class="col-12">
+                <strong>
+                  <% platform_name = begin
+                       uri = URI.parse(d.issuer)
+                       host = uri.host.to_s.downcase
+                       if host.include?("canvas") then "Canvas"
+                       elsif host.include?("imsglobal") then "IMS Global"
+                       else host.split(".").last(2).join(".")
+                       end
+                     rescue
+                       d.issuer.truncate(30)
+                     end %>
+                  <%= platform_name %>
+                </strong>
+                <span class="badge bg-success ms-2">Connected</span>
+              </div>
+              <div class="col-12 mt-2" style="font-size: 0.8rem; color: #555;">
+                <small><strong>Client ID:</strong> <code><%= d.client_id %></code></small><br>
+                <small><strong>Deployment:</strong> <code><%= d.deployment_id %></code></small>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="mt-4 p-3" style="background: #1e1e1e; color: #4ec9b0; font-family: monospace; font-size: 0.82rem; border-radius: 6px;">
+    <strong style="color: #9cdcfe;">Login:</strong>&nbsp;&nbsp; <%= lti_login_url %><br>
+    <strong style="color: #9cdcfe;">Launch:</strong> <%= lti_launch_url %><br>
+    <strong style="color: #9cdcfe;">Keys:&nbsp;&nbsp;</strong> <%= lti_jwks_url %>
+  </div>
+
+</div>
