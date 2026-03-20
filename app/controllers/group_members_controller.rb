@@ -37,9 +37,9 @@ class GroupMembersController < ApplicationController
     is_mentor = group_member_params[:mentor] == "true" if group_member_params[:mentor]
     raw_emails = group_member_params[:emails]
     all_emails = if raw_emails.is_a?(Array)
-      raw_emails.flat_map { |e| e.split(',') }.map(&:strip).reject(&:blank?)
+      raw_emails.flat_map { |e| e.split(/[,\n]/) }.map(&:strip).reject(&:blank?)
     else
-      raw_emails.to_s.split(',').map(&:strip).reject(&:blank?)
+      raw_emails.to_s.split(/[,\n]/).map(&:strip).reject(&:blank?)
     end
     invalid_emails = all_emails.reject { |e| e.match?(Devise.email_regexp) }
     group_member_emails = all_emails - invalid_emails
@@ -119,7 +119,7 @@ class GroupMembersController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def group_member_params
-      params.expect(group_member: [:group_id, :user_id, :mentor, { emails: [] }])
+      params.require(:group_member).permit(:group_id, :user_id, :mentor, :emails)
     end
 
     # Using different params for update

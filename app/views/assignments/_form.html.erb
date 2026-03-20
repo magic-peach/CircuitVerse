@@ -69,25 +69,62 @@
     <div class="restricted-feature-list"> <!-- Operated by script --> </div>
   </div>
 
-  <div id="submission-type-field" class="field mb-3">
-    <h6><%= form.label :submission_type, "Submission Mode" %></h6>
+   <div id="submission-type-field" class="field mb-3">
+    <h6><%= form.label :submission_type, "Submission Type" %></h6>
     <div class="d-flex gap-3">
       <div class="form-check">
-        <%= form.radio_button :submission_type, :individual, class: "form-check-input", id: "submission_individual" %>
+        <%= form.radio_button :submission_type, :individual, class: "form-check-input", id: "submission_individual", onchange: "toggleSubgroupField()" %>
         <%= form.label :submission_type, "Individual", value: :individual, class: "form-check-label", for: "submission_individual" %>
       </div>
       <div class="form-check">
-        <%= form.radio_button :submission_type, :group, class: "form-check-input", id: "submission_group" %>
+        <%= form.radio_button :submission_type, :group, class: "form-check-input", id: "submission_group", onchange: "toggleSubgroupField()" %>
         <%= form.label :submission_type, "Group", value: :group, class: "form-check-label", for: "submission_group" %>
       </div>
     </div>
-    <small class="form-text text-muted">Individual: each student submits separately. Group: one submission per subgroup.</small>
+    <small class="form-text text-muted">Individual: each student submits separately. Group: one submission per team.</small>
+  </div>
+
+  <div id="subgroup-field" class="field mb-3" style="display: none;">
+    <h6><%= form.label :subgroup_ids, "Assign to Teams" %></h6>
+    <small class="form-text text-muted">Select teams that should work on this assignment. Leave blank to assign to all group members.</small>
+    <% if @group.subgroups.any? %>
+      <% @group.subgroups.each do |subgroup| %>
+        <div class="form-check">
+          <%= check_box_tag "assignment[subgroup_ids][]", subgroup.id, id: "subgroup_#{subgroup.id}" %>
+          <%= form.label "subgroup_ids[]", subgroup.name, for: "subgroup_#{subgroup.id}", class: "form-check-label" do %>
+            <%= subgroup.name %> (<%= subgroup.subgroup_members.count %> member<%= subgroup.subgroup_members.count == 1 ? "" : "s" %>)
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="form-text text-muted">No teams created yet. Create teams first to assign assignments.</p>
+    <% end %>
   </div>
 
   <div class="field mb-3">
     <%= form.submit class: "btn primary-button" %> &nbsp;
     <%= link_to t("back"), :back, class: "anchor-text" %>
   </div>
+
+  <script>
+    function toggleSubgroupField() {
+      const isGroup = document.getElementById('submission_group').checked;
+      const subgroupField = document.getElementById('subgroup-field');
+      if (isGroup) {
+        subgroupField.style.display = 'block';
+      } else {
+        subgroupField.style.display = 'none';
+        // Uncheck all subgroups
+        document.querySelectorAll('[name*="[subgroup_ids][]"]').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      toggleSubgroupField();
+    });
+  </script>
 <% end %>
 
 <script type="text/javascript">

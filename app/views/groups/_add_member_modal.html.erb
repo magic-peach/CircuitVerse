@@ -13,61 +13,60 @@
       </div>
     <% end %>
 
-    <%= form_with(model: group_member, local: true) do |form| %>
-      <% if group_member.errors.any? %>
-        <div class="error-message" style="margin-bottom:8px;">
-          <ul style="margin:0; padding-left:20px;">
-            <% group_member.errors.full_messages.each do |message| %>
-              <li style="font-size:0.85rem;"><%= message %></li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
-
-      <%= form.hidden_field :group_id, id: :group_member_group_id %>
-      <%= form.hidden_field :mentor, value: false %>
-
-      <div class="cv-panel-input-row">
-        <div style="flex:1; min-width:0;">
-          <input type="text" id="member-emails-input" class="form-control"
-                 placeholder="<%= t("groups.add_member_placeholder", default: "student@college.edu, ta@college.edu") %>"
-                 style="height:38px; font-size:0.9rem;">
-          <%= form.hidden_field :emails, id: "member-emails-hidden", value: "" %>
-          <div id="member-email-error" style="color:#DC2626; font-size:0.78rem; margin-top:4px; display:none;">
-            Please enter valid email addresses.
-          </div>
-        </div>
-        <%= form.submit t("add_members", default: "Add"), class: "btn primary-button", id: "add-members-button",
-            style: "height:38px; white-space:nowrap; flex-shrink:0;" %>
-      </div>
-    <% end %>
-
     <div class="cv-panel-or-divider">
-      <hr><span><%= t("groups.use_alternative", default: "or use invite link") %></span><hr>
+      <hr><span>Choose an option below</span><hr>
     </div>
 
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-      <%= button_to generate_token_group_path,
-          { remote: true, method: :put,
-            class: "cv-add-btn",
-            "data-bs-toggle": "collapse",
-            href: "#group-invite-link-container",
-            "aria-expanded": "false",
-            "aria-controls": "group-invite-link-container" } do %>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        <%= t("groups.invite_link_btn", default: "Generate invite link") %>
-      <% end %>
-      <div class="collapse" id="group-invite-link-container" style="width:100%;">
-        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-          <textarea readonly="readonly" id="embedInviteLink"
-                    class="form-control group-invite-link-text"
-                    rows="2" name="group-invite-link"
-                    style="font-size:0.8rem; resize:none; background:#f8f9fa;"></textarea>
-          <button type="button" onclick="copyInviteLink()" title="Copy to clipboard"
-                  class="cv-icon-btn cv-icon-btn--swap" style="flex-shrink:0;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
+    <div style="display:flex; gap:12px; align-items:stretch;">
+      <div style="flex:1;">
+        <h4 style="margin-top:0; margin-bottom:12px; color:#0F6E56; font-size:0.9rem;">Add Members by Invite Link</h4>
+        <p style="font-size:0.82rem; color:#666; margin-bottom:12px;">Generate and share an invite link. Users can join by clicking link.</p>
+
+        <div style="background:#F8FFF9; border:1px solid #D1EDE4; border-radius:6px; padding:16px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+            <%= button_to generate_token_group_path,
+                { remote: true, method: :put,
+                  class: "cv-add-btn",
+                  "data-bs-toggle": "collapse",
+                  href: "#group-invite-link-container",
+                  "aria-expanded": "false",
+                  "aria-controls": "group-invite-link-container" } do %>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 7.54.54l3-3a5 5 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 7.54-.54l-3 3a5 5 0 0-7.07 7.07l1.71-1.71"/></svg>
+              <%= t("groups.invite_link_btn", default: "Generate invite link") %>
+            <% end %>
+          </div>
+          <div class="collapse" id="group-invite-link-container" style="width:100%;">
+            <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+              <textarea readonly="readonly" id="embedInviteLink"
+                        class="form-control group-invite-link-text"
+                        rows="2" name="group-invite-link"
+                        style="font-size:0.8rem; resize:none; background:#f8f9fa;"></textarea>
+              <button type="button" onclick="copyInviteLink()" title="Copy to clipboard"
+                          class="cv-icon-btn cv-icon-btn--swap" style="flex-shrink:0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div style="flex:1;">
+        <h4 style="margin-top:0; margin-bottom:12px; color:#0F6E56; font-size:0.9rem;">Add Member by Email</h4>
+        <p style="font-size:0.82rem; color:#666; margin-bottom:12px;">Add a user directly by their email address. Useful when you don't want to use invite links.</p>
+
+        <%= form_with(url: add_member_by_email_group_path(@group), method: :post, local: true) do |form| %>
+          <div style="background:#F8FFF9; border:1px solid #D1EDE4; border-radius:6px; padding:16px;">
+            <div class="form-group mb-3">
+              <%= form.label :email, "Email Address", class: "form-label" %>
+              <%= form.email_field :email, class: "form-control", placeholder: "user@example.com" %>
+              <small class="form-text text-muted">Enter a single email address</small>
+            </div>
+
+            <div style="margin-top:12px;">
+              <%= form.submit "Add Member", class: "btn primary-button" %>
+            </div>
+          </div>
+        <% end %>
       </div>
     </div>
   </div>
@@ -79,46 +78,4 @@ function copyInviteLink() {
   textarea.select();
   document.execCommand('copy');
 }
-
-(function() {
-  var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-  function validateEmails(val) {
-    if (!val.trim()) return true;
-    return val.split(',').map(function(e) { return e.trim(); }).filter(Boolean).every(function(e) { return emailRegex.test(e); });
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var input    = document.getElementById('member-emails-input');
-    var hidden   = document.getElementById('member-emails-hidden');
-    var errorDiv = document.getElementById('member-email-error');
-    var btn      = document.getElementById('add-members-button');
-    if (!input) return;
-
-    input.addEventListener('input', function() {
-      errorDiv.style.display = 'none';
-      hidden.value = input.value.split(',').map(function(e) { return e.trim(); }).filter(Boolean).join(',');
-    });
-
-    input.addEventListener('blur', function() {
-      if (input.value.trim() && !validateEmails(input.value)) {
-        errorDiv.style.display = 'block';
-        input.classList.add('is-invalid');
-      } else {
-        errorDiv.style.display = 'none';
-        input.classList.remove('is-invalid');
-      }
-    });
-
-    if (btn) {
-      btn.closest('form').addEventListener('submit', function(e) {
-        if (!validateEmails(input.value)) {
-          e.preventDefault();
-          errorDiv.style.display = 'block';
-          input.classList.add('is-invalid');
-        }
-      });
-    }
-  });
-})();
 </script>

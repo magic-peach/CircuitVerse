@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_19_061436) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -100,6 +100,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
     t.datetime "submitted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "submitted_on_behalf_by"
     t.index ["assignment_id", "user_id"], name: "index_submissions_unique_per_user", unique: true
     t.index ["assignment_id"], name: "index_assignment_submissions_on_assignment_id"
     t.index ["project_id"], name: "index_assignment_submissions_on_project_id"
@@ -108,14 +109,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
   end
 
   create_table "assignment_test_cases", force: :cascade do |t|
-    t.bigint "assignment_id", null: false
+    t.bigint "assignment_id"
     t.string "description", null: false
     t.jsonb "input_pins", default: {}, null: false
     t.jsonb "expected_output", default: {}, null: false
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "testable_type"
+    t.bigint "testable_id"
     t.index ["assignment_id"], name: "index_assignment_test_cases_on_assignment_id"
+    t.index ["testable_type", "testable_id"], name: "index_assignment_test_cases_on_testable_type_and_testable_id"
   end
 
   create_table "assignments", force: :cascade do |t|
@@ -137,9 +141,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
     t.string "canvas_assignment_id"
     t.integer "submission_type", default: 0, null: false
     t.bigint "circuit_template_id"
+    t.integer "assignment_type", default: 0, null: false
+    t.integer "submission_policy", default: 0, null: false
+    t.bigint "subgroup_id"
+    t.boolean "auto_grade", default: false, null: false
+    t.integer "passing_threshold", default: 80, null: false
+    t.boolean "allow_subgroup_submit_on_behalf", default: false
+    t.string "lis_outcome_service_url"
     t.index ["circuit_template_id"], name: "index_assignments_on_circuit_template_id"
     t.index ["group_id"], name: "index_assignments_on_group_id"
     t.index ["lti_deployment_id"], name: "index_assignments_on_lti_deployment_id"
+    t.index ["subgroup_id"], name: "index_assignments_on_subgroup_id"
   end
 
   create_table "circuit_templates", force: :cascade do |t|
@@ -150,6 +162,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
     t.boolean "public", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "test_cases", default: [], null: false
+    t.integer "difficulty", default: 0, null: false
     t.index ["created_by_id"], name: "index_circuit_templates_on_created_by_id"
   end
 
@@ -325,6 +339,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
     t.datetime "token_expires_at", precision: nil
     t.string "allowed_domain"
     t.bigint "parent_group_id"
+    t.string "institution"
     t.index ["group_token"], name: "index_groups_on_group_token", unique: true
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
     t.index ["primary_mentor_id"], name: "index_groups_on_primary_mentor_id"
@@ -497,6 +512,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
     t.integer "max_size"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "assignment_id"
+    t.bigint "leader_id"
+    t.index ["assignment_id"], name: "index_subgroups_on_assignment_id"
     t.index ["group_id", "name"], name: "index_subgroups_unique_name_per_group", unique: true
     t.index ["group_id"], name: "index_subgroups_on_group_id"
   end
@@ -600,7 +618,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
     t.string "unconfirmed_email"
     t.virtual "searchable", type: :tsvector, as: "(setweight(to_tsvector('english'::regconfig, (COALESCE(name, ''::character varying))::text), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, (COALESCE(educational_institute, ''::character varying))::text), 'B'::\"char\"))", stored: true
     t.integer "projects_count", default: 0, null: false
+    t.integer "role", default: 0, null: false
+    t.string "lti_user_id"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["lti_user_id"], name: "index_users_on_lti_user_id"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["searchable"], name: "index_users_on_searchable", using: :gin
   end
@@ -623,6 +644,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_171315) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "assignment_test_cases", "assignments"
   add_foreign_key "assignments", "groups"
+  add_foreign_key "assignments", "subgroups", validate: false
   add_foreign_key "collaborations", "projects"
   add_foreign_key "collaborations", "users"
   add_foreign_key "commontator_comments", "commontator_comments", column: "parent_id", on_update: :restrict, on_delete: :cascade

@@ -283,14 +283,12 @@
     <div class="col">
       <h1 class="submain-heading" style="margin-bottom:4px;">
         <%= @group.name %>
-        <% if policy(@group).admin_access? %>
-          <%= link_to edit_group_path(@group),
+          <% if policy(@group).admin_access? %>
+            <%= link_to "#{image_tag("svgs/editGroup.svg", alt: "Edit Group")} #{t("groups.show.edit_name_btn")}".html_safe,
+              edit_group_path(@group),
               class: "btn primary-button groups-editname-primary-button",
-              style: "margin-left:10px; vertical-align: middle;" do %>
-            <%= image_tag("svgs/editGroup.svg", alt: "Edit Group") %>
-            <span><%= t("groups.show.edit_name_btn") %></span>
+              style: "margin-left:10px; vertical-align: middle;" %>
           <% end %>
-        <% end %>
       </h1>
       <h4 class="group-mentor-heading" style="margin-bottom:0;">
         <strong><%= t("groups.show.primary_mentor_heading") %></strong>
@@ -456,21 +454,82 @@
         </table>
       <% end %>
 
-      <%# ── Members section ─────────────────────────────── %>
+    <%# ── Members section ─────────────────────────────── %>
       <div class="cv-section-header">
         <h3><%= t("groups.show.group_members_heading") %></h3>
         <% if policy(@group).admin_access? %>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="cv-add-btn"
+                      onclick="toggleCvPanel('add-member-panel')"
+                      aria-expanded="false" aria-controls="add-member-panel">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <%= t("groups.show.add_members_btn") %>
+            </button>
+          </div>
+        <% end %>
+      </div>
+
+       <%= render partial: "add_member_modal", locals: { group_member: @group_member } %>
+       <hr style="margin-top:0; border-color:#E1F5EE;">
+       
+       <%# ── Teams section ──────────────────────────────── %>
+      <div class="cv-section-header">
+        <h3>Teams</h3>
+        <% if policy(@group).admin_access? %>
           <button type="button" class="cv-add-btn"
-                  onclick="toggleCvPanel('add-member-panel')"
-                  aria-expanded="false" aria-controls="add-member-panel">
+                    data-bs-toggle="modal" data-bs-target="#addSubgroupModal"
+                    aria-expanded="false" aria-controls="addSubgroupModal">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <%= t("groups.show.add_members_btn") %>
+            Create Team
           </button>
         <% end %>
       </div>
 
-      <%= render partial: "add_member_modal", locals: { group_member: @group_member } %>
-      <hr style="margin-top:0; border-color:#E1F5EE;">
+      <% if @group.subgroups.any? %>
+        <table class="cv-members-table">
+          <thead>
+            <tr>
+              <th>Team Name</th>
+              <th>Members</th>
+              <th style="width:80px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @group.subgroups.includes(:subgroup_members).each do |subgroup| %>
+              <tr>
+                <td>
+                  <div class="cv-name-cell">
+                    <%= link_to subgroup.name, group_subgroup_path(@group, subgroup),
+                                class: "cv-name-link" %>
+                  </div>
+                </td>
+                <td>
+                  <span><%= subgroup.subgroup_members.count %> member<%= subgroup.subgroup_members.count == 1 ? "" : "s" %></span>
+                </td>
+                <td>
+                  <button type="button" data-bs-toggle="modal" data-bs-target="#addMemberToSubgroup_<%= subgroup.id %>Modal"
+                          class="cv-icon-btn" title="Add member">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="12" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="19"/></svg>
+                  </button>
+                  <% if policy(@group).admin_access? %>
+                    <button type="button" onclick="deleteSubgroup(<%= subgroup.id %>)"
+                              class="cv-icon-btn" title="Delete team">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M8 6v14a2 2 0 0 1-2 4v16 6 22 2 0 0 1 2h2"/></svg>
+                    </button>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="null-text" style="text-align:center; padding:20px; color:#999;">No teams created yet. Click "Create Team" to get started.</p>
+      <% end %>
+
+      <%# ── Members section ──────────────────────────────── %>
+      <div class="cv-section-header">
+        <h3><%= t("groups.show.group_members_heading") %></h3>
+      </div>
 
       <% regular_members = @group.group_members.member.includes(:user) %>
       <% if regular_members.blank? %>
@@ -595,56 +654,42 @@
               </td>
               <td class="groups-assignment-button-container">
                 <div class="groups-assignment-details">
-                  <%= link_to group_assignment_path(@group, assignment), class: "mini-button groups-view-mini-button" do %>
-                    <%= image_tag("svgs/viewGroup.svg", alt: "View Assignment") %>
-                    <span><%= t("view") %></span>
-                  <% end %>
+                  <%= link_to "#{image_tag("svgs/viewGroup.svg", alt: "View Assignment")} #{t("view")}".html_safe,
+                      group_assignment_path(@group, assignment), class: "mini-button groups-view-mini-button" %>
                 </div>
                 <% if policy(@group).mentor_access? %>
                   <% if AssignmentDecorator.new(assignment).closed? %>
                     <div class="groups-assignment-details">
-                      <%= link_to reopen_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" do %>
-                        <%= image_tag("svgs/reopenAssignment.svg", alt: "Reopen Assignment") %>
-                        <span><%= t("reopen") %></span>
-                      <% end %>
+                      <%= link_to "#{image_tag("svgs/reopenAssignment.svg", alt: "Reopen Assignment")} #{t("reopen")}".html_safe,
+                          reopen_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" %>
                     </div>
                   <% else %>
                     <div class="groups-assignment-details">
-                      <%= link_to edit_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" do %>
-                        <%= image_tag("svgs/editGroup.svg", alt: "Edit Assignment") %>
-                        <span><%= t("edit") %></span>
-                      <% end %>
+                      <%= link_to "#{image_tag("svgs/editGroup.svg", alt: "Edit Assignment")} #{t("edit")}".html_safe,
+                          edit_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" %>
                     </div>
                     <div class="groups-assignment-details">
-                      <%= link_to close_group_assignment_path(@group, assignment), class: "mini-button groups-close-mini-button", method: :put do %>
-                        <span><%= t("close") %></span>
-                      <% end %>
+                      <%= link_to t("close"), close_group_assignment_path(@group, assignment), class: "mini-button groups-close-mini-button", method: :put %>
                     </div>
                   <% end %>
                   <div class="groups-assignment-details">
-                    <%= link_to "#", class: "mini-button groups-delete-mini-button",
+                    <%= link_to "#{image_tag("svgs/deleteGroup.svg", alt: "Delete Assignment")} #{t("delete")}".html_safe, "#",
+                        class: "mini-button groups-delete-mini-button",
                         data: { bs_toggle: "modal", bs_target: "#deleteassignmentModal",
-                                currentgroup: @group.id, currentassignment: assignment.id } do %>
-                      <%= image_tag("svgs/deleteGroup.svg", alt: "Delete Assignment") %>
-                      <span><%= t("delete") %></span>
-                    <% end %>
+                                currentgroup: @group.id, currentassignment: assignment.id } %>
                   </div>
                 <% else %>
                   <% project_assignment = assignment.projects.find { |p| p.author_id == current_user.id } %>
                   <% if assignment.deadline > Time.current %>
                     <% if project_assignment.nil? %>
                       <div class="groups-assignment-details">
-                        <%= link_to assignment_start_path(@group, assignment), class: "mini-button groups-reopen-mini-button" do %>
-                          <%= image_tag("svgs/editGroup.svg", alt: "Start Assignment") %>
-                          <span><%= t("groups.show.assignment.start_working_btn") %></span>
-                        <% end %>
+                        <%= link_to "#{image_tag("svgs/editGroup.svg", alt: "Start Assignment")} #{t("groups.show.assignment.start_working_btn")}".html_safe,
+                            assignment_start_path(@group, assignment), class: "mini-button groups-reopen-mini-button" %>
                       </div>
                     <% else %>
                       <div class="groups-assignment-details">
-                        <%= link_to user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" do %>
-                          <%= image_tag("svgs/viewGroup.svg", alt: "View work") %>
-                          <span><%= t("groups.show.assignment.see_work_done") %></span>
-                        <% end %>
+                        <%= link_to "#{image_tag("svgs/viewGroup.svg", alt: "View work")} #{t("groups.show.assignment.see_work_done")}".html_safe,
+                            user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" %>
                       </div>
                     <% end %>
                   <% else %>
@@ -652,10 +697,8 @@
                       <h6 class="groups-no-assignment-submission-text"><%= t("groups.show.assignment.not_submitted") %></h6>
                     <% else %>
                       <div class="groups-assignment-details">
-                        <%= link_to user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" do %>
-                          <%= image_tag("svgs/viewGroup.svg", alt: "View submission") %>
-                          <span><%= t("groups.show.assignment.show_submission") %></span>
-                        <% end %>
+                        <%= link_to "#{image_tag("svgs/viewGroup.svg", alt: "View submission")} #{t("groups.show.assignment.show_submission")}".html_safe,
+                            user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" %>
                       </div>
                     <% end %>
                   <% end %>
@@ -706,7 +749,7 @@
                       <%= assignment.deadline %>
                     </div>
                     <% if assignment.deadline > Time.current %>
-                      <p>(<%= t("groups.show.assignment.time_remaining, time_remaining: AssignmentDecorator.new(assignment).time_remaining") %>)</p>
+                      <p>(<%= t("groups.show.assignment.time_remaining_html", time_remaining: AssignmentDecorator.new(assignment).time_remaining) %>)</p>
                     <% end %>
                   </td>
                 </tr>
@@ -720,56 +763,42 @@
                   <th class="groups-collapsed-table-head groups-assignment-details"><%= t("groups.show.assignment.assignment_table_head.actions") %></th>
                   <td class="groups-assignment-button-container">
                     <div class="groups-assignment-details">
-                      <%= link_to group_assignment_path(@group, assignment), class: "mini-button groups-view-mini-button" do %>
-                        <%= image_tag("svgs/viewGroup.svg", alt: "View Assignment") %>
-                        <span><%= t("view") %></span>
-                      <% end %>
+                      <%= link_to "#{image_tag("svgs/viewGroup.svg", alt: "View Assignment")} #{t("view")}".html_safe,
+                          group_assignment_path(@group, assignment), class: "mini-button groups-view-mini-button" %>
                     </div>
                     <% if policy(@group).admin_access? %>
                       <% if AssignmentDecorator.new(assignment).closed? %>
                         <div class="groups-assignment-details">
-                          <%= link_to reopen_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" do %>
-                            <%= image_tag("svgs/reopenAssignment.svg", alt: "Reopen Assignment") %>
-                            <span><%= t("reopen") %></span>
-                          <% end %>
+                          <%= link_to "#{image_tag("svgs/reopenAssignment.svg", alt: "Reopen Assignment")} #{t("reopen")}".html_safe,
+                              reopen_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" %>
                         </div>
                       <% else %>
                         <div class="groups-assignment-details">
-                          <%= link_to edit_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" do %>
-                            <%= image_tag("svgs/editGroup.svg", alt: "Edit Assignment") %>
-                            <span><%= t("edit") %></span>
-                          <% end %>
+                          <%= link_to "#{image_tag("svgs/editGroup.svg", alt: "Edit Assignment")} #{t("edit")}".html_safe,
+                              edit_group_assignment_path(@group, assignment), class: "mini-button groups-reopen-mini-button" %>
                         </div>
                         <div class="groups-assignment-details">
-                          <%= link_to close_group_assignment_path(@group, assignment), class: "mini-button groups-close-mini-button", method: :put do %>
-                            <span><%= t("close") %></span>
-                          <% end %>
+                          <%= link_to t("close"), close_group_assignment_path(@group, assignment), class: "mini-button groups-close-mini-button", method: :put %>
                         </div>
                       <% end %>
                       <div class="groups-assignment-details">
-                        <%= link_to "#", class: "mini-button groups-delete-mini-button",
+                        <%= link_to "#{image_tag("svgs/deleteGroup.svg", alt: "Delete Assignment")} #{t("delete")}".html_safe, "#",
+                            class: "mini-button groups-delete-mini-button",
                             data: { bs_toggle: "modal", bs_target: "#deleteassignmentModal",
-                                    currentgroup: @group.id, currentassignment: assignment.id } do %>
-                          <%= image_tag("svgs/deleteGroup.svg", alt: "Delete Assignment") %>
-                          <span><%= t("delete") %></span>
-                        <% end %>
+                                    currentgroup: @group.id, currentassignment: assignment.id } %>
                       </div>
                     <% else %>
                       <% project_assignment = assignment.projects.find { |p| p.author_id == current_user.id } %>
                       <% if assignment.deadline > Time.current %>
                         <% if project_assignment.nil? %>
                           <div class="groups-assignment-details">
-                            <%= link_to assignment_start_path(@group, assignment), class: "mini-button groups-reopen-mini-button" do %>
-                              <%= image_tag("svgs/editGroup.svg", alt: "Start Assignment") %>
-                              <span><%= t("groups.show.assignment.start_working_btn") %></span>
-                            <% end %>
+                            <%= link_to "#{image_tag("svgs/editGroup.svg", alt: "Start Assignment")} #{t("groups.show.assignment.start_working_btn")}".html_safe,
+                                assignment_start_path(@group, assignment), class: "mini-button groups-reopen-mini-button" %>
                           </div>
                         <% else %>
                           <div class="groups-assignment-details">
-                            <%= link_to user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" do %>
-                              <%= image_tag("svgs/viewGroup.svg", alt: "View work") %>
-                              <span><%= t("groups.show.assignment.see_work_done") %></span>
-                            <% end %>
+                            <%= link_to "#{image_tag("svgs/viewGroup.svg", alt: "View work")} #{t("groups.show.assignment.see_work_done")}".html_safe,
+                                user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" %>
                           </div>
                         <% end %>
                       <% else %>
@@ -781,10 +810,8 @@
                           </div>
                         <% else %>
                           <div class="groups-assignment-details">
-                            <%= link_to user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" do %>
-                              <%= image_tag("svgs/viewGroup.svg", alt: "View submission") %>
-                              <span><%= t("groups.show.assignment.show_submission") %></span>
-                            <% end %>
+                            <%= link_to "#{image_tag("svgs/viewGroup.svg", alt: "View submission")} #{t("groups.show.assignment.show_submission")}".html_safe,
+                                user_project_path(current_user, project_assignment), class: "mini-button groups-reopen-mini-button" %>
                           </div>
                         <% end %>
                       <% end %>
@@ -825,10 +852,11 @@
     </div><%# end .cv-main-area %>
   </div><%# end .cv-show-layout %>
 
-  <%# ── Confirmation modals (unchanged) ─────────────────────── %>
-  <%= render partial: "delete_member_confirmation_modal" %>
-  <%= render partial: "delete_assignment_confirmation_modal" %>
-  <%= render partial: "promote_member_confirmation_modal" %>
+   <%# ── Confirmation modals (unchanged) ─────────────────────── %>
+   <%= render partial: "delete_member_confirmation_modal" %>
+   <%= render partial: "delete_assignment_confirmation_modal" %>
+   <%= render partial: "promote_member_confirmation_modal" %>
+   <%= render partial: "add_subgroup_modal" %>
 </div>
 
 <script>

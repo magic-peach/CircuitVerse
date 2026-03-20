@@ -43,6 +43,7 @@ resources :circuit_templates do
       end
     end
     member do
+      post "add_member_by_email", to: "groups#add_member_by_email", as: :add_member_by_email
       get "invite/:token", to: "groups#group_invite", as: "invite"
       put :generate_token
     end

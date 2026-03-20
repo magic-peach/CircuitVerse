@@ -80,7 +80,7 @@ def lti_enabled?
     lti_deployment.present?
   end  
 
-def project_order
+  def project_order
     projects.includes(:grade, :author).sort_by { |p| p.author.name }
             .map { |project| ProjectDecorator.new(project) }
   end
@@ -95,6 +95,25 @@ def project_order
       else
         old_project.update(assignment_id: proj.assignment_id)
         proj.destroy
+      end
+    end
+  end
+
+  def notify_mentor_of_submitted(submission)
+    group.group_members.where(mentor: true).each do |mentor|
+      AssignmentSubmittedNotification.with(assignment: self, submission: submission).deliver_later(mentor.user)
+    end
+  end
+
+  def notify_members_of_grade(submission)
+    if submission.subgroup_id.present?
+      subgroup = Subgroup.find(submission.subgroup_id)
+      subgroup.subgroup_members.includes(:user).each do |member|
+        AssignmentGradedNotification.with(assignment: self, submission: submission).deliver_later(member.user)
+      end
+    else
+      group.group_members.includes(:user).each do |member|
+        AssignmentGradedNotification.with(assignment: self, submission: submission).deliver_later(member.user)
       end
     end
   end

@@ -74,6 +74,7 @@ class AssignmentsController < ApplicationController
   # POST /assignments.json
   def create
     description = params["description"]
+    subgroup_ids = params[:assignment][:subgroup_ids] if params[:assignment]
 
     if Flipper.enabled?(:lms_integration, current_user) && params["lms-integration-check"]
       lti_consumer_key = SecureRandom.hex(4)
@@ -97,6 +98,9 @@ class AssignmentsController < ApplicationController
 
     respond_to do |format|
       if @assignment.save
+        if subgroup_ids.present?
+          add_subgroups_to_assignment
+        end
         format.html { redirect_to @group, notice: "Assignment was successfully created." }
         format.json { render :show, status: :created, location: @assignment }
       else
@@ -154,6 +158,44 @@ class AssignmentsController < ApplicationController
 
   private
 
+    def add_subgroups_to_assignment(subgroup_ids = nil)
+      return if subgroup_ids.blank?
+      
+      subgroup_ids = subgroup_ids.select(&:present?) if subgroup_ids.is_a?(Array)
+      return if subgroup_ids.blank?
+      
+      first_subgroup_id = subgroup_ids.first
+      if first_subgroup_id
+        @assignment.subgroup_id = first_subgroup_id
+        @assignment.save
+      end
+    end
+
+    def notify_subgroup_members(assignment, subgroup)
+      subgroup.subgroup_members.includes(:user).each do |member|
+        AssignmentCreatedNotification.with(assignment: assignment, subgroup: subgroup).deliver_later(member.user)
+      end
+    end
+
+    def notify_mentor_of_submitted(assignment)
+      @group.group_members.where(mentor: true).each do |mentor|
+        AssignmentSubmittedNotification.with(assignment: assignment).deliver_later(mentor.user)
+      end
+    end
+
+    def notify_members_of_grade(assignment, submission)
+      if submission.subgroup_id.present?
+        subgroup = Subgroup.find(submission.subgroup_id)
+        subgroup.subgroup_members.includes(:user).each do |member|
+          AssignmentGradedNotification.with(assignment: assignment, submission: submission).deliver_later(member.user)
+        end
+      else
+        @group.group_members.includes(:user).each do |member|
+          AssignmentGradedNotification.with(assignment: assignment, submission: submission).deliver_later(member.user)
+        end
+      end
+    end
+
     # Use callbacks to share common setup or constraints between actions.
     def set_assignment
       @assignment = Assignment.find(params[:id])
@@ -170,7 +212,7 @@ class AssignmentsController < ApplicationController
     # Never trust parameters from the scary internet, only allow the white list through.
     def assignment_create_params
       params.expect(assignment: %i[name deadline description grading_scale
-                                   restrictions feature_restrictions submission_type])
+                                   restrictions feature_restrictions submission_type subgroup_ids])
     end
 
     def assignment_update_params

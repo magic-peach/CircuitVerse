@@ -1,0 +1,80 @@
+<div class="modal fade" id="addSubgroupModal" tabindex="-1" aria-labelledby="addSubgroupModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addSubgroupModalLabel">Create Team</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-pills nav-fill" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active" id="createTeamTab" data-bs-toggle="pill" data-bs-target="#teamInfoPane">
+              Create Team
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="addMembersTab" data-bs-toggle="pill" data-bs-target="#addMembersPane">
+              Add Member
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+          <div class="tab-pane fade show active" id="teamInfoPane">
+            <%= form_with(model: [@group, Subgroup.new], local: true) do |form| %>
+              <% if @subgroup&.errors&.any? %>
+                <div class="alert alert-danger">
+                  <ul>
+                    <% @subgroup.errors.full_messages.each do |message| %>
+                      <li><%= message %></li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
+              
+              <div class="form-group mb-3">
+                <%= form.label :name, "Team Name", class: "form-label" %>
+                <%= form.text_field :name, class: "form-control", placeholder: "e.g., Team A" %>
+              </div>
+              
+              <div class="form-group mb-3">
+                <%= form.label :max_size, "Maximum Team Size (optional)", class: "form-label" %>
+                <%= form.number_field :max_size, class: "form-control", placeholder: "e.g., 4", min: 1 %>
+                <small class="form-text text-muted">Leave blank for unlimited size</small>
+              </div>
+              
+              <div class="modal-footer" style="margin-top: 20px;">
+                <%= form.submit "Create Team", class: "btn primary-button" %>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="tab-pane fade" id="addMembersPane">
+            <%= form_with(url: add_member_by_email_group_path(@group), method: :post, local: true) do |form| %>
+              <div class="form-group mb-3">
+                <%= form.label :subgroup_id, "Select Team", class: "form-label" %>
+                <%= form.select :subgroup_id, 
+                    options_from_collection_for_select(@group.subgroups, :id, :name),
+                    { include_blank: true, prompt: "Select a team..." }, 
+                    class: "form-control" %>
+                <small class="form-text text-muted">Select a team to add this member to</small>
+              </div>
+
+              <div class="form-group mb-3">
+                <%= form.label :email, "Email Address", class: "form-label" %>
+                <%= form.email_field :email, class: "form-control", placeholder: "user@example.com" %>
+                <small class="form-text text-muted">Enter email address of user to add</small>
+              </div>
+
+              <div class="modal-footer" style="margin-top: 20px;">
+                <%= form.submit "Add to Team", class: "btn primary-button" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

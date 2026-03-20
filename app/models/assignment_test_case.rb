@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 class AssignmentTestCase < ApplicationRecord
-  belongs_to :assignment
+  belongs_to :assignment, optional: true
+  belongs_to :testable, polymorphic: true, optional: true
 
   validates :description,     presence: true
   validates :input_pins,      presence: true

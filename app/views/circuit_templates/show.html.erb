@@ -26,7 +26,7 @@
   </div>
   <hr>
   <% if @template.description.present? %>
-    <p><%= @template.description %></p>
+    <div class="template-description"><%= raw(strip_tags(simple_format(@template.description))) %></div>
   <% else %>
     <span class="null-text">No description added.</span>
   <% end %>
@@ -68,7 +68,7 @@
   <%# ── TEST CASES ──────────────────────────────────────────────── %>
   <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
     <h3 class="mb-0">Test Cases</h3>
-    <% if user_signed_in? && @template.created_by_id == current_user.id && @assignments_using.any? %>
+    <% if user_signed_in? && @template.created_by_id == current_user.id %>
       <button type="button" class="btn primary-button"
               data-bs-toggle="modal" data-bs-target="#addTestCaseModal">
         Add Test Case
@@ -77,11 +77,11 @@
   </div>
   <hr>
 
-  <% test_cases = @template.assignment_test_cases %>
+  <% test_cases = @template.all_test_cases.to_a.sort_by(&:position) %>
   <% if test_cases.empty? %>
-    <span class="null-text">No test cases have been added yet.</span>
+    <span class="null-text">No test cases have been added yet. Click "Add Test Case" to create one.</span>
   <% else %>
-    <% test_cases.order(:position).each do |tc| %>
+    <% test_cases.each do |tc| %>
       <div class="groups-members-card" style="width: 100%; height: auto; margin: 0 0 15px; padding: 12px 15px;">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <strong><%= tc.description %></strong>
@@ -178,7 +178,7 @@
 </div>
 
 <%# ── ADD TEST CASE MODAL ─────────────────────────────────────── %>
-<% if user_signed_in? && @template.created_by_id == current_user.id && @assignments_using.any? %>
+<% if user_signed_in? && @template.created_by_id == current_user.id %>
   <div class="modal fade" id="addTestCaseModal" tabindex="-1" aria-labelledby="addTestCaseModalLabel" aria-hidden="true">
     <div class="modal-dialog primary-modal-dialog">
       <div class="modal-content">
@@ -187,33 +187,88 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <%= form_with url: assignment_test_cases_path, method: :post do |f| %>
-            <%= f.hidden_field :assignment_id, value: @assignments_using.first.id %>
+          <form id="addTestCaseForm">
+            <input type="hidden" name="assignment_test_case[testable_type]" value="CircuitTemplate">
+            <input type="hidden" name="assignment_test_case[testable_id]" value="<%= @template.id %>">
             <div class="mb-3">
-              <%= f.label :description, "Description", class: "form-label" %>
-              <%= f.text_field :description, class: "form-control form-input", required: true %>
+              <label class="form-label">Description</label>
+              <input type="text" name="assignment_test_case[description]" class="form-control" required>
             </div>
             <div class="mb-3">
-              <%= f.label :position, "Position", class: "form-label" %>
-              <%= f.number_field :position, class: "form-control form-input", value: 1, min: 0 %>
+              <label class="form-label">Position</label>
+              <input type="number" name="assignment_test_case[position]" class="form-control" value="1" min="0">
             </div>
             <div class="mb-3">
-              <%= f.label :input_pins, "Input Pins (JSON)", class: "form-label" %>
-              <%= f.text_area :input_pins, class: "form-control form-input", rows: 3,
-                  placeholder: '{"A": 1, "B": 1}' %>
+              <label class="form-label">Input Pins</label>
+              <textarea name="assignment_test_case[input_pins]" class="form-control" rows="2" placeholder="A=0, B=0"></textarea>
+              <small class="form-text text-muted">Format: PinName=value, separate with commas</small>
             </div>
             <div class="mb-3">
-              <%= f.label :expected_output, "Expected Output (JSON)", class: "form-label" %>
-              <%= f.text_area :expected_output, class: "form-control form-input", rows: 3,
-                  placeholder: '{"Y": 1}' %>
+              <label class="form-label">Expected Output</label>
+              <textarea name="assignment_test_case[expected_output]" class="form-control" rows="2" placeholder="Sum=0, Carry=0"></textarea>
+              <small class="form-text text-muted">Format: PinName=value, separate with commas</small>
             </div>
+            <div id="testCaseError" class="alert alert-danger" style="display:none;"></div>
             <div class="text-end">
               <button type="button" class="btn mini-button groups-close-mini-button" data-bs-dismiss="modal">Cancel</button>
-              <%= f.submit "Add Test Case", class: "btn primary-button" %>
+              <button type="submit" class="btn primary-button">Add Test Case</button>
             </div>
-          <% end %>
+          </form>
         </div>
       </div>
     </div>
   </div>
+  
+  <script>
+    document.getElementById('addTestCaseForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var form = this;
+      var errorDiv = document.getElementById('testCaseError');
+      errorDiv.style.display = 'none';
+      var submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+      
+      var formData = {
+        assignment_test_case: {
+          testable_type: form.querySelector('[name="assignment_test_case[testable_type]"]').value,
+          testable_id: form.querySelector('[name="assignment_test_case[testable_id]"]').value,
+          description: form.querySelector('[name="assignment_test_case[description]"]').value,
+          position: form.querySelector('[name="assignment_test_case[position]"]').value,
+          input_pins: form.querySelector('[name="assignment_test_case[input_pins]"]').value,
+          expected_output: form.querySelector('[name="assignment_test_case[expected_output]"]').value
+        }
+      };
+      
+      fetch('/api/v1/assignment_test_cases', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(formData)
+      })
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        if (data.errors) {
+          errorDiv.textContent = data.errors.join(', ');
+          errorDiv.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Add Test Case';
+        } else {
+          window.location.reload();
+        }
+      })
+      .catch(function(error) {
+        errorDiv.textContent = 'Error: ' + error.message;
+        errorDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Test Case';
+      });
+    });
+  </script>
 <% end %>

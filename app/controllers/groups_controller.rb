@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class GroupsController < ApplicationController
-  before_action :set_group, only: %i[show edit update destroy group_invite generate_token]
+  before_action :set_group, only: %i[show edit update destroy group_invite generate_token add_member_by_email]
   before_action :authenticate_user!
   before_action :check_show_access, only: %i[show edit update destroy]
   before_action :check_edit_access, only: %i[edit update destroy generate_token]
@@ -42,6 +42,35 @@ class GroupsController < ApplicationController
       notice = "Invalid url"
     end
     redirect_to group_path(@group), notice: notice
+  end
+
+  def add_member_by_email
+    @user = User.find_by(email: params[:email])
+    target_subgroup_id = params[:subgroup_id]
+
+    if @user.nil?
+      redirect_to group_path(@group), alert: "User not found with that email address."
+    elsif @group.group_members.exists?(user_id: @user.id)
+      redirect_to group_path(@group), alert: "User is already a member of this group."
+    elsif @user.id == @group.primary_mentor_id
+      redirect_to group_path(@group), alert: "Cannot add the primary mentor as a member."
+    elsif !@group.can_join?(@user.email)
+      redirect_to group_path(@group), alert: "This user's email domain doesn't match the group's allowed domain."
+    else
+      group_member = @group.group_members.create!(user: @user)
+      
+      if target_subgroup_id.present?
+        subgroup = @group.subgroups.find_by(id: target_subgroup_id)
+        if subgroup
+          subgroup.subgroup_members.create!(user: @user)
+          redirect_to group_path(@group), notice: "Member added to team successfully!"
+        else
+          redirect_to group_path(@group), notice: "Member added successfully! (Team not found)"
+        end
+      else
+        redirect_to group_path(@group), notice: "Member added successfully!"
+      end
+    end
   end
 
   # GET /groups/new
@@ -112,5 +141,12 @@ class GroupsController < ApplicationController
 
     def check_edit_access
       authorize @group, :admin_access?
+    end
+
+    def delete_subgroup(subgroup_id)
+      subgroup = @group.subgroups.find(subgroup_id)
+      authorize subgroup, :destroy
+      subgroup.destroy
+      redirect_to group_path(@group), notice: "Team removed."
     end
 end

@@ -26,17 +26,148 @@
   </div>
 
   <div class="mb-3">
-    <%= f.label :circuit_data, "Circuit Data (JSON)", class: "form-label" %>
+    <%= f.label :circuit_data, "Circuit Data", class: "form-label" %>
     <% circuit_data_value = template.circuit_data.is_a?(Hash) ? template.circuit_data.to_json : template.circuit_data.to_s %>
-    <%= f.text_area :circuit_data, class: "form-control form-input", rows: 6,
+    <%= f.text_area :circuit_data, class: "form-control form-input", rows: 10,
         value: circuit_data_value,
-        placeholder: '{"components": [], "wires": [], "inputs": [], "outputs": []}',
-        data: { json_validator_target: "field", action: "input->json-validator#validate" } %>
-    <small class="form-text text-muted">Enter circuit configuration as a JSON object.</small>
+        placeholder: "Describe your circuit here...\n\nYou can use markdown formatting:\n- **bold** or __bold__\n- *italic* or _italic_\n- `code` or '''code'''\n- # Heading\n- - List items\n- > Blockquote\n\nExample:\n# Full Adder Circuit\n\n## Inputs\n- A: Bit input A\n- B: Bit input B\n- Carry_in: Carry in bit\n\n## Outputs\n- Sum: Bit output representing A + B\n- Carry_out: Carry out bit\n\n## Description\nThis circuit adds two binary numbers together using full adder logic...",
+        required: true %>
+    <small class="form-text text-muted">Describe your circuit in plain text. You can use markdown formatting for structure.</small>
   </div>
+
+  <% if params[:action] == "new" || params[:action] == "edit" %>
+    <div class="card mt-4 mb-3">
+      <div class="card-header">
+        <h5 class="mb-0">Test Cases</h5>
+      </div>
+      <div class="card-body">
+        <div id="test-cases-container">
+          <div class="test-case-row mb-3" data-index="0">
+            <div class="form-group">
+              <label class="form-label">Test Case <span class="test-case-num">1</span> Description</label>
+              <input type="text" name="test_cases[0][description]" class="form-control test-case-description" placeholder="e.g., Test when A=0 and B=0, Sum should be 0">
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Input Pins</label>
+                  <input type="text" name="test_cases[0][input_pins]" class="form-control" placeholder="A=0, B=0">
+                  <small class="form-text text-muted">Format: PinName=value, separate multiple pins with commas</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Expected Output</label>
+                  <input type="text" name="test_cases[0][expected_output]" class="form-control" placeholder="Sum=0">
+                  <small class="form-text text-muted">Format: PinName=value, separate multiple outputs with commas</small>
+                </div>
+              </div>
+            </div>
+            <div class="text-center">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="removeTestCase(0)">Remove</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-primary" onclick="addTestCase()">+ Add Another Test Case</button>
+      </div>
+    </div>
+  <% end %>
 
   <div class="d-flex align-items-center gap-2 mt-4">
     <%= f.submit "Save Template", class: "btn primary-button" %>
     <%= link_to "Cancel", :back, class: "btn mini-button groups-close-mini-button" %>
   </div>
 <% end %>
+
+<script>
+  let testCaseCount = 1;
+
+  function addTestCase() {
+    const container = document.getElementById('test-cases-container');
+    const newIndex = testCaseCount;
+
+    const html = `
+      <div class="test-case-row mb-3" data-index="${newIndex}">
+        <div class="form-group">
+          <label class="form-label">Test Case <span class="test-case-num">${newIndex + 1}</span> Description</label>
+          <input type="text" name="test_cases[${newIndex}][description]" class="form-control test-case-description" placeholder="e.g., Test when A=0 and B=0, Sum should be 0">
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">Input Pins</label>
+              <input type="text" name="test_cases[${newIndex}][input_pins]" class="form-control" placeholder="A=0, B=0">
+              <small class="form-text text-muted">Format: PinName=value, separate multiple pins with commas</small>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">Expected Output</label>
+              <input type="text" name="test_cases[${newIndex}][expected_output]" class="form-control" placeholder="Sum=0">
+              <small class="form-text text-muted">Format: PinName=value, separate multiple outputs with commas</small>
+            </div>
+          </div>
+        </div>
+        <div class="text-center">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="removeTestCase(${newIndex})">Remove</button>
+        </div>
+      </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', html);
+    testCaseCount++;
+  }
+
+  function removeTestCase(index) {
+    const container = document.getElementById('test-cases-container');
+    const row = container.querySelector(`[data-index="${index}"]`);
+    if (row) {
+      row.remove();
+    }
+  }
+
+  function parsePinString(str) {
+    const result = {};
+    const pairs = str.split(',');
+    pairs.forEach(pair => {
+      const [key, value] = pair.split('=').map(s => s.trim());
+      if (key && value !== undefined) {
+        result[key] = isNaN(value) ? (value === 'true' ? true : value === 'false' ? false : value) : Number(value);
+      }
+    });
+    return result;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+      const testCases = [];
+      const rows = document.querySelectorAll('.test-case-row');
+      rows.forEach((row, idx) => {
+        const desc = row.querySelector('.test-case-description').value.trim();
+        const inputPins = row.querySelector('input[name*="[input_pins]"]').value.trim();
+        const expectedOutput = row.querySelector('input[name*="[expected_output]"]').value.trim();
+
+        if (desc && inputPins && expectedOutput) {
+          testCases.push({
+            description: desc,
+            input_pins: parsePinString(inputPins),
+            expected_output: parsePinString(expectedOutput),
+            position: idx + 1
+          });
+        }
+      });
+
+      if (testCases.length > 0) {
+        const existingField = form.querySelector('input[name="circuit_template[test_cases]"]');
+        if (existingField) existingField.remove();
+        
+        const testCasesField = document.createElement('input');
+        testCasesField.type = 'hidden';
+        testCasesField.name = 'circuit_template[test_cases]';
+        testCasesField.value = JSON.stringify(testCases);
+        form.appendChild(testCasesField);
+      }
+    });
+  });
+</script>

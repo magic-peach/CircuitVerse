@@ -8,17 +8,18 @@ class CircuitTemplatesController < ApplicationController
   def index
     @templates = case params[:scope]
                  when "mine"
-                   CircuitTemplate.by_user(current_user).includes(:created_by).order(created_at: :desc)
+                   CircuitTemplate.by_user(current_user).includes(:created_by, :assignments => :assignment_test_cases).order(created_at: :desc)
                  when "public"
-                   CircuitTemplate.public_templates.includes(:created_by).order(created_at: :desc)
+                   CircuitTemplate.public_templates.includes(:created_by, :assignments => :assignment_test_cases).order(created_at: :desc)
                  else
-                   CircuitTemplate.includes(:created_by).order(created_at: :desc)
+                   CircuitTemplate.includes(:created_by, :assignments => :assignment_test_cases).order(created_at: :desc)
                  end
   end
 
   def show
-    @template = CircuitTemplate.includes(:assignment_test_cases, :created_by).find(params[:id])
+    @template = CircuitTemplate.includes(:created_by).find(params[:id])
     @assignments_using = Assignment.where(circuit_template_id: @template.id).includes(:group)
+    @test_case = AssignmentTestCase.new
   end
 
   def new
@@ -31,6 +32,9 @@ class CircuitTemplatesController < ApplicationController
 
     respond_to do |format|
       if @template.save
+        if params[:circuit_template][:test_cases].present?
+          create_test_cases(@template, params[:circuit_template][:test_cases])
+        end
         format.html { redirect_to circuit_template_path(@template), notice: "Circuit template created." }
         format.json { render :show, status: :created, location: @template }
       else
@@ -60,6 +64,30 @@ class CircuitTemplatesController < ApplicationController
     respond_to do |format|
       format.html { redirect_to circuit_templates_path, notice: "Template deleted." }
       format.json { head :no_content }
+    end
+  end
+
+  private
+
+  def create_test_cases(template, test_cases_json)
+    return if test_cases_json.blank?
+
+    begin
+      test_cases_data = JSON.parse(test_cases_json)
+
+      if test_cases_data.is_a?(Array)
+        test_cases_data.each do |tc_data|
+          template.assignment_test_cases.create!(
+            description: tc_data["description"],
+            input_pins: tc_data["input_pins"] || {},
+            expected_output: tc_data["expected_output"] || {},
+            position: tc_data["position"] || 1,
+            testable: template
+          )
+        end
+      end
+    rescue JSON::ParserError => e
+      Rails.logger.error("Failed to parse test cases JSON: #{e.message}")
     end
   end
 

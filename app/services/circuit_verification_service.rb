@@ -24,6 +24,17 @@ class CircuitVerificationService
     Result.new(passed: passed, score: score, failed_cases: failed)
   end
 
+  def verify(test_case)
+    actual = simulate_circuit(test_case.input_pins)
+    passed = test_case.pass?(actual)
+
+    {
+      passed: passed,
+      message: passed ? "Test case passed" : "Test case failed",
+      actual_output: actual
+    }
+  end
+
   private
 
   def simulate_circuit(input_pins)

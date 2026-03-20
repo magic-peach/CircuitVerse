@@ -57,26 +57,23 @@
             <p class="null-text" style="font-size: 0.82rem; margin: 2px 0 6px;">
               by <%= t.created_by.name %>
             </p>
-            <p style="font-size: 0.85rem; color: #555; margin-bottom: 8px;">
-              <% if t.description.present? %>
-                <%= truncate(t.description, length: 100) %>
-              <% else %>
-                <em class="null-text">No description added yet.</em>
-              <% end %>
-            </p>
-            <div class="mb-2">
-              <% if t.circuit_data.is_a?(Hash) %>
-                <% t.circuit_data.each_key do |key| %>
-                  <span class="badge bg-light text-dark border me-1" style="font-size: 0.72rem;"><%= key %></span>
-                <% end %>
-              <% end %>
-            </div>
+            <% if t.description.present? %>
+              <div style="font-size: 0.85rem; color: #555; margin-bottom: 8px; max-height: 60px; overflow: hidden;">
+                <%= raw(truncate(strip_tags(t.description), length: 120)) %>
+              </div>
+            <% else %>
+              <p style="font-size: 0.85rem; color: #888; font-style: italic; margin-bottom: 8px;">
+                No description added yet.
+              </p>
+            <% end %>
             <p style="font-size: 0.8rem; color: #666;">
-              <% tc_count = t.assignment_test_cases.count %>
+              <% tc_count = t.all_test_cases.count %>
               <% if tc_count > 0 %>
+                <i class="fas fa-check-circle" style="color: #198754;"></i>
                 <%= tc_count %> test <%= "case".pluralize(tc_count) %>
               <% else %>
-                <em class="null-text">No test cases</em>
+                <i class="fas fa-times-circle" style="color: #dc3545;"></i>
+                No test cases
               <% end %>
             </p>
             <div class="mt-2">
