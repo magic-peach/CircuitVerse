@@ -19,8 +19,9 @@ class Users::CircuitverseController < ApplicationController
   def edit; end
 
   def typeahead_educational_institute
-    query = params[:query]
-    institute_list = User.where("educational_institute LIKE :query", query: "%#{query}%")
+    query = params[:query].to_s
+    sanitized_query = ActiveRecord::Base.sanitize_sql_like(query)
+    institute_list = User.where("educational_institute LIKE :query", query: "%#{sanitized_query}%")
                          .distinct
                          .limit(TYPEAHEAD_INSTITUTE_LIMIT)
                          .pluck(:educational_institute)

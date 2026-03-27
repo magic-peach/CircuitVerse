@@ -49,6 +49,18 @@ describe Users::CircuitverseController, type: :request do
     end
   end
 
+  describe "#typeahead_educational_institute" do
+    it "does not treat wildcard-only query as match-all" do
+      FactoryBot.create(:user, educational_institute: "Circuit University")
+      FactoryBot.create(:user, educational_institute: "Logic Institute")
+
+      get "/users/educational_institute/typeahead/%25"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq([])
+    end
+  end
+
   it "gets edit profile" do
     get profile_edit_path(id: @user.id)
     expect(response.status).to eq(200)
