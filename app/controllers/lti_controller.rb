@@ -50,6 +50,12 @@ class LtiController < ApplicationController
     }
   end
 
+  INSTRUCTOR_ROLES = %w[
+    http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor
+    http://purl.imsglobal.org/vocab/lis/v2/membership#ContentDeveloper
+    http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator
+  ].freeze
+
   private
 
     def handle_lti_13_launch
@@ -65,19 +71,49 @@ class LtiController < ApplicationController
         nonce:      session[:lti_nonce]
       )
 
-      @user = find_or_create_user_from_lti13(payload)
-      sign_in(@user)
-
       session.delete(:lti_nonce)
       session.delete(:lti_state)
-      session[:is_lti] = true
+      session[:is_lti]      = true
+      session[:lti_version] = "1.3"
+      session[:lms_domain]  = deployment.issuer
 
-      redirect_to root_path
+      message_type = payload["https://purl.imsglobal.org/spec/lti/claim/message_type"]
+
+      case message_type
+      when "LtiResourceLinkRequest"
+        handle_resource_link_launch(payload, deployment)
+      else
+        render json: { error: "Unsupported LTI message type: #{message_type}" },
+               status: :bad_request
+      end
 
     rescue ActiveRecord::RecordNotFound
       render json: { error: "Unknown deployment" }, status: :not_found
     rescue SecurityError, JWT::DecodeError => e
       render json: { error: e.message }, status: :unauthorized
+    end
+
+    def handle_resource_link_launch(payload, deployment)
+      @user = find_or_create_user_from_lti13(payload)
+      sign_in(@user)
+
+      assignment = find_or_create_lti13_assignment(payload, deployment)
+
+      if assignment.nil?
+        render json: { error: "No group is linked to this LTI deployment" },
+               status: :unprocessable_entity
+        return
+      end
+
+      @group      = assignment.group
+      @assignment = assignment
+
+      if lti13_instructor?(payload)
+        redirect_to group_assignment_path(@group, @assignment)
+      else
+        @project = find_or_create_lti13_project(@user, @assignment)
+        render :open_incv, status: :ok
+      end
     end
 
     def handle_lti_11_launch
@@ -134,10 +170,64 @@ class LtiController < ApplicationController
     end
 
     def find_or_create_user_from_lti13(payload)
-      User.find_or_create_by(email: payload["email"]) do |u|
-        u.name     = payload["name"] || payload["email"]
-        u.password = SecureRandom.hex(16)
+      user = User.find_by(lti_user_id: payload["sub"]) ||
+             User.find_by(email: payload["email"])
+
+      if user
+        user.update_column(:lti_user_id, payload["sub"]) if user.lti_user_id.blank?
+      else
+        user = User.create!(
+          email:        payload["email"],
+          name:         payload["name"] || payload["email"],
+          password:     SecureRandom.hex(16),
+          lti_user_id:  payload["sub"]
+        )
       end
+      user
+    end
+
+    def lti13_instructor?(payload)
+      roles = payload["https://purl.imsglobal.org/spec/lti/claim/roles"] || []
+      (roles & INSTRUCTOR_ROLES).any?
+    end
+
+    def find_or_create_lti13_assignment(payload, deployment)
+      resource_link    = payload["https://purl.imsglobal.org/spec/lti/claim/resource_link"]
+      resource_link_id = resource_link["id"]
+      ags_claim        = payload["https://purl.imsglobal.org/spec/lti-ags/claim/endpoint"]
+
+      assignment = Assignment.find_by(
+        lti_resource_link_id: resource_link_id,
+        lti_deployment_id:    deployment.id
+      )
+      return assignment if assignment
+
+      group = Group.find_by(lti_deployment_id: deployment.id)
+      return nil unless group
+
+      group.assignments.create!(
+        name:                 resource_link["title"].presence || "LTI Assignment",
+        deadline:             1.week.from_now,
+        lti_deployment:       deployment,
+        lti_version:          :v1_3,
+        lti_resource_link_id: resource_link_id,
+        canvas_assignment_id: ags_claim&.dig("lineitem"),
+        grading_scale:        :percent,
+        status:               "open"
+      )
+    end
+
+    def find_or_create_lti13_project(user, assignment)
+      project = Project.find_by(author_id: user.id, assignment_id: assignment.id)
+      return project if project
+
+      project = user.projects.create!(
+        name:                "#{user.name}/#{assignment.name}",
+        assignment_id:       assignment.id,
+        project_access_type: "Private"
+      )
+      project.build_project_datum.save!
+      project
     end
 
     def build_oidc_redirect(deployment, nonce, state)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_18_220320) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_085412) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -138,6 +138,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_220320) do
     t.string "lis_outcome_service_url"
     t.string "lti_consumer_key"
     t.bigint "lti_deployment_id"
+    t.string "lti_resource_link_id"
     t.string "lti_shared_secret"
     t.integer "lti_version", default: 0, null: false
     t.string "name"
@@ -151,6 +152,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_220320) do
     t.index ["circuit_template_id"], name: "index_assignments_on_circuit_template_id"
     t.index ["group_id"], name: "index_assignments_on_group_id"
     t.index ["lti_deployment_id"], name: "index_assignments_on_lti_deployment_id"
+    t.index ["lti_resource_link_id"], name: "index_assignments_on_lti_resource_link_id"
     t.index ["subgroup_id"], name: "index_assignments_on_subgroup_id"
   end
 
@@ -335,6 +337,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_220320) do
     t.integer "group_members_count"
     t.string "group_token"
     t.string "institution"
+    t.bigint "lti_deployment_id"
     t.string "name"
     t.bigint "organization_id"
     t.bigint "parent_group_id"
@@ -342,6 +345,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_220320) do
     t.datetime "token_expires_at", precision: nil
     t.datetime "updated_at", precision: nil, null: false
     t.index ["group_token"], name: "index_groups_on_group_token", unique: true
+    t.index ["lti_deployment_id"], name: "index_groups_on_lti_deployment_id"
     t.index ["organization_id"], name: "index_groups_on_organization_id"
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
     t.index ["primary_mentor_id"], name: "index_groups_on_primary_mentor_id"

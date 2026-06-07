@@ -106,4 +106,123 @@ describe LtiController, type: :request do
                   :lti_launch_path, :host, :port, :member, :not_member, :primary_mentor,
                   :group, :assignment, :group
   end
+
+  describe "LTI 1.3 Resource Link Launch" do
+    let(:rsa_key)    { OpenSSL::PKey::RSA.generate(2048) }
+    let(:deployment) { create(:lti_deployment) }
+    let(:mentor)     { create(:user) }
+    let(:student)    { create(:user) }
+    let(:group)      { create(:group, primary_mentor: mentor, lti_deployment: deployment) }
+
+    before do
+      allow(Lti::KeyManager).to receive(:private_key).and_return(rsa_key)
+      allow(Lti::KeyManager).to receive(:public_key).and_return(rsa_key.public_key)
+      allow(Lti::KeyManager).to receive(:jwk).and_return(
+        JWT::JWK.new(rsa_key.public_key).export.merge(use: "sig", alg: "RS256", kid: "test-kid")
+      )
+
+      stub_request(:get, deployment.jwks_url).to_return(
+        status:  200,
+        headers: { "Content-Type" => "application/json" },
+        body:    { keys: [JWT::JWK.new(rsa_key.public_key).export.merge(kid: "test-kid")] }.to_json
+      )
+
+      group
+    end
+
+    def build_id_token(overrides = {})
+      payload = {
+        "iss"   => deployment.issuer,
+        "aud"   => deployment.client_id,
+        "sub"   => "lti-sub-#{student.id}",
+        "iat"   => Time.current.to_i,
+        "exp"   => 5.minutes.from_now.to_i,
+        "nonce" => "test-nonce",
+        "email" => student.email,
+        "name"  => student.name,
+        "https://purl.imsglobal.org/spec/lti/claim/message_type"  => "LtiResourceLinkRequest",
+        "https://purl.imsglobal.org/spec/lti/claim/version"       => "1.3.0",
+        "https://purl.imsglobal.org/spec/lti/claim/deployment_id" => deployment.deployment_id,
+        "https://purl.imsglobal.org/spec/lti/claim/resource_link" => {
+          "id" => "resource-link-1", "title" => "Test Assignment"
+        },
+        "https://purl.imsglobal.org/spec/lti/claim/roles" => []
+      }.merge(overrides)
+      JWT.encode(payload, rsa_key, "RS256", kid: "test-kid")
+    end
+
+    def lti13_launch(token, state: nil)
+      session = { lti_nonce: "test-nonce", lti_state: state }
+      post lti_launch_path,
+           params:  { id_token: token, state: state },
+           headers: { "Content-Type" => "application/x-www-form-urlencoded" },
+           env:     { "rack.session" => session }
+    end
+
+    context "when state mismatch" do
+      it "returns 401" do
+        # OIDC login sets session[:lti_state]
+        post lti_login_path,
+             params: { iss: deployment.issuer, client_id: deployment.client_id,
+                       login_hint: "hint", lti_message_hint: "" }
+
+        token = build_id_token
+        post lti_launch_path, params: { id_token: token, state: "definitely-wrong" }
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context "when no group is linked to the deployment" do
+      it "returns 422" do
+        group.update!(lti_deployment: nil)
+        token = build_id_token
+        post lti_launch_path, params: { id_token: token }
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    context "student launch" do
+      it "creates a project and renders open_incv (200)" do
+        token = build_id_token
+        post lti_launch_path, params: { id_token: token }
+        expect(response).to have_http_status(:ok)
+        expect(Project.where(author: student).count).to eq(1)
+      end
+
+      it "reuses existing project on re-launch — no duplicate created" do
+        token = build_id_token
+        post lti_launch_path, params: { id_token: token }
+        post lti_launch_path, params: { id_token: token }
+        expect(Project.where(author: student).count).to eq(1)
+      end
+    end
+
+    context "instructor launch" do
+      it "redirects to assignment page (302)" do
+        token = build_id_token(
+          "email" => mentor.email,
+          "name"  => mentor.name,
+          "sub"   => "instructor-sub",
+          "https://purl.imsglobal.org/spec/lti/claim/roles" => [
+            "http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"
+          ]
+        )
+        post lti_launch_path, params: { id_token: token }
+        expect(response).to have_http_status(:redirect)
+        expect(response.location).to include("/groups/")
+      end
+    end
+
+    context "when deployment is unknown" do
+      it "returns 404" do
+        bad_token = JWT.encode(
+          { "iss" => "unknown", "aud" => "unknown", "sub" => "x",
+            "iat" => Time.current.to_i, "exp" => 5.minutes.from_now.to_i },
+          rsa_key, "RS256", kid: "test-kid"
+        )
+        post lti_launch_path, params: { id_token: bad_token }
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
