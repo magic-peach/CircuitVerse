@@ -330,4 +330,151 @@ describe LtiController, type: :request do
       ActionController::Base.allow_forgery_protection = original
     end
   end
+
+  describe "LTI 1.3 launch" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    let(:rsa_key) { OpenSSL::PKey::RSA.generate(2048) }
+    let(:jwk) { JWT::JWK.new(rsa_key) }
+    let(:deployment) { FactoryBot.create(:lti_deployment) }
+    let(:nonce) { "nonce-1" }
+
+    before do
+      Flipper.enable(:lti_advantage)
+      response_double = instance_double(Faraday::Response, success?: true,
+                                                           headers: { "content-type" => "application/json" },
+                                                           body: { keys: [jwk.export] }.to_json)
+      allow(Faraday).to receive(:get).and_return(response_double)
+    end
+
+    after { Flipper.disable(:lti_advantage) }
+
+    def claims(overrides = {})
+      {
+        "sub" => "lms-user-1", "iss" => deployment.issuer, "aud" => deployment.client_id,
+        "nonce" => nonce, "email" => "student@example.com", "name" => "A Student",
+        "exp" => 5.minutes.from_now.to_i,
+        LtiController::DEPLOYMENT_ID_CLAIM => deployment.deployment_id
+      }.merge(overrides)
+    end
+
+    def id_token(payload = claims, key: rsa_key, alg: "RS256")
+      JWT.encode(payload, key, alg, { kid: jwk.kid })
+    end
+
+    def signed_state(data = { "nonce" => nonce, "deployment_id" => deployment.id })
+      Rails.application.message_verifier(LtiController::LTI_STATE_PURPOSE)
+           .generate(data, purpose: LtiController::LTI_STATE_PURPOSE,
+                           expires_in: LtiController::LTI_STATE_TTL)
+    end
+
+    def post_launch(token: id_token, state: signed_state)
+      post "/lti/launch", params: { id_token: token, state: state }
+    end
+
+    context "with a valid launch" do
+      it "signs in the user and lands them in CircuitVerse" do
+        post_launch
+        expect(response).to redirect_to(root_path)
+      end
+
+      it "keys the account on the deployment-scoped sub, not the email" do
+        post_launch
+        expect(User.last).to have_attributes(provider: "lti", uid: "#{deployment.id}:lms-user-1")
+      end
+
+      it "reuses the account on a second launch" do
+        post_launch
+        expect { post_launch(state: signed_state("nonce" => "nonce-2", "deployment_id" => deployment.id)) }
+          .not_to change(User, :count)
+      end
+
+      it "does not match an existing account by email claim alone" do
+        existing = FactoryBot.create(:user, email: "student@example.com")
+        post_launch
+        expect(response).to have_http_status(:conflict)
+        expect(existing.reload.provider).to be_nil
+      end
+    end
+
+    context "with a bad state" do
+      it "rejects a missing state" do
+        post_launch(state: nil)
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects a tampered state" do
+        post_launch(state: "#{signed_state}x")
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects a state signed for another purpose" do
+        forged = Rails.application.message_verifier("other.purpose")
+                      .generate({ "nonce" => nonce, "deployment_id" => deployment.id },
+                                purpose: "other.purpose")
+        post_launch(state: forged)
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects an expired state" do
+        state = signed_state
+        travel_to 6.minutes.from_now do
+          post_launch(token: id_token(claims("exp" => 5.minutes.from_now.to_i)), state: state)
+        end
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context "with a bad token" do
+      it "rejects a token signed by another key" do
+        post_launch(token: id_token(claims, key: OpenSSL::PKey::RSA.generate(2048)))
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects an unsigned token" do
+        post_launch(token: JWT.encode(claims, nil, "none"))
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects a mismatched nonce" do
+        post_launch(token: id_token(claims("nonce" => "someone-elses")))
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects a token issued for another deployment of the same platform" do
+        post_launch(token: id_token(claims(LtiController::DEPLOYMENT_ID_CLAIM => "other-deployment")))
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it "rejects a token whose state names a different deployment" do
+        other = FactoryBot.create(:lti_deployment)
+        post_launch(state: signed_state("nonce" => nonce, "deployment_id" => other.id))
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context "with a replayed launch" do
+      it "refuses the second use of a nonce" do
+        post_launch
+        post_launch
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context "when the platform releases no email" do
+      it "refuses rather than provisioning an account without one" do
+        expect { post_launch(token: id_token(claims.except("email"))) }
+          .not_to change(User, :count)
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+    end
+
+    context "when the flag is disabled" do
+      it "returns not found" do
+        Flipper.disable(:lti_advantage)
+        post_launch
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
