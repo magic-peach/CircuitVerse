@@ -6,6 +6,7 @@ class LtiController < ApplicationController
   # is what proves the launch answers an initiation we made.
   LTI_STATE_PURPOSE = "lti.launch.state"
   LTI_STATE_TTL = 5.minutes
+  DEPLOYMENT_ID_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/deployment_id"
 
   skip_before_action :verify_authenticity_token, only: :launch # for lti integration
   before_action :set_group_and_assignment, only: %i[launch]
@@ -29,10 +30,44 @@ class LtiController < ApplicationController
   end
 
   def launch
-    handle_lti_11_launch
+    params[:id_token].present? ? handle_lti_13_launch : handle_lti_11_launch
   end
 
   private
+
+    def handle_lti_13_launch
+      return head :not_found unless Flipper.enabled?(:lti_advantage)
+
+      state = lti_state_verifier.verified(params[:state].to_s, purpose: LTI_STATE_PURPOSE)
+      deployment = LtiDeployment.find_by(id: state["deployment_id"]) if state.present?
+      return head :unauthorized if deployment.blank?
+
+      payload = Lti::JwtValidator.validate!(params[:id_token], deployment: deployment,
+                                                               nonce: state["nonce"])
+      return head :unauthorized unless payload[DEPLOYMENT_ID_CLAIM] == deployment.deployment_id
+      return head :unauthorized unless LtiLaunchNonce.claim(state["nonce"], expires_at: LTI_STATE_TTL.from_now)
+      return head :unprocessable_content if payload["email"].blank?
+
+      sign_in(lti_13_user(payload, deployment))
+      session[:is_lti] = true
+      redirect_to root_path
+    rescue Lti::JwtValidator::ValidationError
+      head :unauthorized
+    rescue ActiveRecord::RecordInvalid
+      head :conflict
+    end
+
+    def lti_13_user(payload, deployment)
+      uid = "#{deployment.id}:#{payload['sub']}"
+      User.find_or_create_by!(provider: "lti", uid: uid) do |user|
+        user.email = payload["email"]
+        user.name = payload["name"].presence || payload["email"]
+        user.password = SecureRandom.hex(16)
+        user.confirmed_at = Time.current
+      end
+    rescue ActiveRecord::RecordNotUnique
+      User.find_by!(provider: "lti", uid: uid)
+    end
 
     def handle_lti_11_launch
       session[:is_lti] = true # the lti session starting
