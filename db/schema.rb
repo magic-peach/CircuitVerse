@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_09_020100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_09_020200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -298,6 +298,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_020100) do
     t.string "jwks_url", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "platform_public_key"
     t.index ["issuer", "client_id", "deployment_id"], name: "index_lti_deployments_on_platform_and_deployment", unique: true
   end
 
