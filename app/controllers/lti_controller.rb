@@ -29,56 +29,60 @@ class LtiController < ApplicationController
   end
 
   def launch
-    session[:is_lti] = true # the lti session starting
-    if @assignment.blank?
-      # if no assignment is found
-      flash.now[:notice] = t(".notice_no_assignment")
-      render :launch_error, status: :unauthorized
-      return
-    end
-    require "oauth/request_proxy/action_controller_request"
-    @provider = IMS::LTI::ToolProvider.new(
-      params[:oauth_consumer_key], # lms_oauth_consumer_key
-      @assignment.lti_shared_secret, # the group's lti_token
-      params
-    )
-
-    unless @provider.valid_request?(request) # checking the lti request from the lms end
-      render :launch_error, status: :unauthorized
-      return
-    end
-    store_lti_11_grade_context
-    # find user by matching email with circuitverse and lms
-    @user = User.find_by(email: @email_from_lms)
-
-    if @user.present? # user is present in cv
-      if @user.id == @group.primary_mentor_id # user is teacher
-        # passwordless sign_in the user as the authenticity is verified via lms
-        sign_in(@user)
-        lms_auth_success_notice = t(".notice_lms_auth_success_teacher",
-                                    email_from_lms: @email_from_lms,
-                                    lms_type: @lms_type,
-                                    course_title_from_lms: @course_title_from_lms)
-
-        redirect_to group_assignment_path(@group, @assignment), notice: lms_auth_success_notice
-      elsif GroupMember.exists?(
-        user_id: @user.id,
-        group_id: @group.id
-      ) # user is member of the group
-        flash[:notice] = t(".notice_students_open_in_cv")
-        create_project_if_student_present # create project with lis_result_sourced_id
-        render :open_incv, status: :ok
-      else # user is not a member of the group
-        flash[:notice] = t(".notice_ask_teacher")
-        render :launch_error, status: :unauthorized
-      end
-    else # no such user in circuitverse
-      flash[:notice] = t(".notice_no_account_in_cv", email_from_lms: @email_from_lms)
-      render :launch_error, status: :bad_request
-    end
+    handle_lti_11_launch
   end
 
   private
+
+    def handle_lti_11_launch
+      session[:is_lti] = true # the lti session starting
+      if @assignment.blank?
+        # if no assignment is found
+        flash.now[:notice] = t(".notice_no_assignment")
+        render :launch_error, status: :unauthorized
+        return
+      end
+      require "oauth/request_proxy/action_controller_request"
+      @provider = IMS::LTI::ToolProvider.new(
+        params[:oauth_consumer_key], # lms_oauth_consumer_key
+        @assignment.lti_shared_secret, # the group's lti_token
+        params
+      )
+
+      unless @provider.valid_request?(request) # checking the lti request from the lms end
+        render :launch_error, status: :unauthorized
+        return
+      end
+      store_lti_11_grade_context
+      # find user by matching email with circuitverse and lms
+      @user = User.find_by(email: @email_from_lms)
+
+      if @user.present? # user is present in cv
+        if @user.id == @group.primary_mentor_id # user is teacher
+          # passwordless sign_in the user as the authenticity is verified via lms
+          sign_in(@user)
+          lms_auth_success_notice = t(".notice_lms_auth_success_teacher",
+                                      email_from_lms: @email_from_lms,
+                                      lms_type: @lms_type,
+                                      course_title_from_lms: @course_title_from_lms)
+
+          redirect_to group_assignment_path(@group, @assignment), notice: lms_auth_success_notice
+        elsif GroupMember.exists?(
+          user_id: @user.id,
+          group_id: @group.id
+        ) # user is member of the group
+          flash[:notice] = t(".notice_students_open_in_cv")
+          create_project_if_student_present # create project with lis_result_sourced_id
+          render :open_incv, status: :ok
+        else # user is not a member of the group
+          flash[:notice] = t(".notice_ask_teacher")
+          render :launch_error, status: :unauthorized
+        end
+      else # no such user in circuitverse
+        flash[:notice] = t(".notice_no_account_in_cv", email_from_lms: @email_from_lms)
+        render :launch_error, status: :bad_request
+      end
+    end
 
     # LTI 1.3 stays dark until an operator opts in; LTI 1.1 is unaffected.
     def verify_lti_advantage_enabled
