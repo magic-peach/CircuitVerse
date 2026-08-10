@@ -4,17 +4,29 @@ class LtiController < ApplicationController
   skip_before_action :verify_authenticity_token, only: :launch # for lti integration
   before_action :set_group_and_assignment, only: %i[launch]
   before_action :set_lti_params, only: %i[launch]
-  before_action :verify_lti_advantage_enabled, only: %i[jwks tool_config deep_link]
-  before_action :authenticate_user!, only: %i[deep_link]
+  skip_before_action :verify_authenticity_token, only: :deep_link_response # posted from the picker in the lms iframe
+  before_action :verify_lti_advantage_enabled, only: %i[jwks tool_config deep_link deep_link_response]
+  before_action :authenticate_user!, only: %i[deep_link deep_link_response]
   after_action :allow_iframe_lti, only: %i[launch]
 
   PICKER_LIMIT = 50
 
   def deep_link
     @projects = current_user.projects.order(updated_at: :desc).limit(PICKER_LIMIT)
-    @assignments = Assignment.joins(:group)
-                             .where(groups: { primary_mentor_id: current_user.id })
-                             .limit(PICKER_LIMIT)
+    @assignments = mentored_assignments.limit(PICKER_LIMIT)
+  end
+
+  def deep_link_response
+    settings = Lti::DeepLinkingSettings.restore(params[:settings])
+    deployment = LtiDeployment.find_by(id: settings.deployment_id)
+    content = selected_content
+    return render :launch_error, status: :bad_request if deployment.blank? || content.blank?
+
+    @return_url = settings.return_url
+    @jwt = Lti::DeepLinkingResponse.new(deployment: deployment, settings: settings,
+                                        content_items: [content_item(content)]).jwt
+  rescue Lti::DeepLinkingSettings::Error
+    render :launch_error, status: :bad_request
   end
 
   def jwks
@@ -76,6 +88,25 @@ class LtiController < ApplicationController
   end
 
   private
+
+    def mentored_assignments
+      Assignment.joins(:group).where(groups: { primary_mentor_id: current_user.id })
+    end
+
+    # Only what the picker offered may come back, so a tampered form cannot embed
+    # content the instructor does not own.
+    def selected_content
+      type, id = params[:content].to_s.split(":")
+      case type
+      when "project" then current_user.projects.find_by(id: id)
+      when "assignment" then mentored_assignments.find_by(id: id)
+      end
+    end
+
+    def content_item(content)
+      { type: "ltiResourceLink", title: content.name,
+        url: launch_url(content: params[:content]) }
+    end
 
     def verify_lti_advantage_enabled
       head :not_found unless Flipper.enabled?(:lti_advantage)

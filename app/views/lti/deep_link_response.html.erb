@@ -1,0 +1,12 @@
+<div class="container">
+  <p class="main-description"><%= t("deep_link_response.description") %></p>
+
+  <%= form_with url: @return_url, method: :post, id: "deep-link-response",
+                authenticity_token: false, data: { turbo: false } do |form| %>
+    <%= hidden_field_tag :JWT, @jwt %>
+    <%= form.submit t("deep_link_response.submit"), class: "btn primary-button" %>
+  <% end %>
+</div>
+<%= javascript_tag do %>
+  document.getElementById("deep-link-response").submit();
+<% end %>
