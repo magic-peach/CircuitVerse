@@ -22,6 +22,13 @@
             <span><%= t("groups.show.edit_name_btn") %></span>
           <% end %>
         <% end %>
+        <% if policy(@group).sync_roster? %>
+          <%= button_to t("groups.show.sync_roster_btn"), sync_roster_group_path(@group),
+                        class: "btn primary-button" %>
+          <% if @group.lti_last_synced_at %>
+            <small><%= t("groups.show.last_synced", time: time_ago_in_words(@group.lti_last_synced_at)) %></small>
+          <% end %>
+        <% end %>
       </h1>
       <h4 class="group-mentor-heading">
         <strong><%= t("groups.show.primary_mentor_heading") %></strong>

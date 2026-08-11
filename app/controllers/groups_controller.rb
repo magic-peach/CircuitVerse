@@ -26,6 +26,18 @@ class GroupsController < ApplicationController
     @group.reset_group_token unless @group.has_valid_token?
   end
 
+  def sync_roster
+    @group = Group.find(params.expect(:id))
+    authorize @group, :sync_roster?
+    link = LtiResourceLink.find_by(context_id: @group.id.to_s)
+    return redirect_to(@group, alert: t(".not_linked")) if link&.context_memberships_url.blank?
+
+    result = Lti::RosterSync.call(@group, link)
+    redirect_to @group, notice: t(".synced", added: result.added.size, removed: result.removed.size)
+  rescue Lti::Membership::Error, Lti::AccessToken::Error => e
+    redirect_to @group, alert: t(".failed", message: e.message)
+  end
+
   def group_invite
     if Group.with_valid_token.exists?(group_token: params[:token])
       if current_user.groups.exists?(id: @group)

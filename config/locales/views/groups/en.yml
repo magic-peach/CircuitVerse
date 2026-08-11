@@ -20,6 +20,8 @@ en:
         You can find the documentation <a class='anchor-text' href='https://docs.circuitverse.org/chapter2/chapter2-cvforeducators' target='_blank'>here</a>."
     show:
       edit_name_btn: "Edit Name"
+      sync_roster_btn: "Sync Roster"
+      last_synced: "Roster last synced %{time} ago"
       primary_mentor_heading: "Primary Mentor:"
       mentor_name_heading: "MENTORS:"
       group_members_heading: "MEMBERS:"

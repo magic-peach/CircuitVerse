@@ -1,0 +1,6 @@
+en:
+  groups:
+    sync_roster:
+      synced: "Roster synced: %{added} added, %{removed} removed."
+      not_linked: "This group is not linked to an LMS course yet."
+      failed: "Could not sync the roster: %{message}"

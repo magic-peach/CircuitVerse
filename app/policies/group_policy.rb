@@ -20,4 +20,8 @@ class GroupPolicy < ApplicationPolicy
   def mentor_access?
     @admin_access || @group.group_members.exists?(user_id: user.id, mentor: true)
   end
+
+  def sync_roster?
+    @admin_access && Flipper.enabled?(:lti_advantage)
+  end
 end

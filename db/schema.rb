@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_11_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -279,6 +279,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_030000) do
     t.string "group_token"
     t.datetime "token_expires_at", precision: nil
     t.bigint "organization_id"
+    t.datetime "lti_last_synced_at"
     t.index ["group_token"], name: "index_groups_on_group_token", unique: true
     t.index ["organization_id"], name: "index_groups_on_organization_id"
     t.index ["primary_mentor_id"], name: "index_groups_on_primary_mentor_id"

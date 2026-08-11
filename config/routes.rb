@@ -44,6 +44,7 @@ Rails.application.routes.draw do
     member do
       get "invite/:token", to: "groups#group_invite", as: "invite"
       put :generate_token
+      post :sync_roster
     end
   end
 
