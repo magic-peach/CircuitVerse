@@ -247,4 +247,84 @@ describe LtiController, type: :request do
       expect(response.body).to include(settings)
     end
   end
+
+  describe "LTI 1.3 deep linking response" do
+    let(:instructor) { FactoryBot.create(:user) }
+    let(:deployment) { FactoryBot.create(:lti_deployment) }
+    let(:project) { FactoryBot.create(:project, author: instructor, name: "Half Adder") }
+    let(:settings) do
+      Lti::DeepLinkingSettings.new(
+        "deep_link_return_url" => "https://canvas.example.com/courses/1/deep_link",
+        "data" => "opaque-platform-state", "lti_deployment_id" => deployment.id
+      ).stash
+    end
+
+    def post_selection(overrides = {})
+      post "/lti/deep_link", params: { settings: settings, content: "project:#{project.id}" }.merge(overrides)
+    end
+
+    def response_jwt
+      JSON::JWT.decode(response.body[/name="JWT" .*?value="(.*?)"/, 1], Lti::KeyManager.private_key.public_key)
+    end
+
+    before do
+      Flipper.enable(:lti_advantage)
+      sign_in instructor
+    end
+
+    after { Flipper.disable(:lti_advantage) }
+
+    it "returns not found when the flag is disabled" do
+      Flipper.disable(:lti_advantage)
+      post_selection
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "posts the response back to the platform's return url" do
+      post_selection
+
+      expect(response.body).to include("https://canvas.example.com/courses/1/deep_link")
+    end
+
+    it "signs the response for the platform that started the request" do
+      post_selection
+
+      expect(response_jwt).to include(
+        "iss" => deployment.client_id, "aud" => deployment.issuer,
+        Lti::DeepLinkingSettings::MESSAGE_TYPE_CLAIM => "LtiDeepLinkingResponse",
+        Lti::DeepLinkingResponse::DEPLOYMENT_ID_CLAIM => deployment.deployment_id,
+        Lti::DeepLinkingResponse::DATA_CLAIM => "opaque-platform-state"
+      )
+    end
+
+    it "returns a resource link that relaunches the chosen circuit" do
+      post_selection
+
+      expect(response_jwt[Lti::DeepLinkingResponse::CONTENT_ITEMS_CLAIM]).to contain_exactly(
+        "type" => "ltiResourceLink", "title" => "Half Adder",
+        "url" => launch_url(content: "project:#{project.id}", host: @host, port: @port)
+      )
+    end
+
+    it "rejects settings it did not sign" do
+      post_selection(settings: "forged-settings")
+
+      expect(response).to have_http_status(:bad_request)
+    end
+
+    it "rejects content the instructor does not own" do
+      other = FactoryBot.create(:project, author: FactoryBot.create(:user))
+      post_selection(content: "project:#{other.id}")
+
+      expect(response).to have_http_status(:bad_request)
+    end
+
+    it "sends an anonymous instructor to sign in" do
+      sign_out instructor
+      post_selection
+
+      expect(response).to redirect_to(new_user_session_path)
+    end
+  end
 end

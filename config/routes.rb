@@ -147,6 +147,7 @@ Rails.application.routes.draw do
     get 'jwks', to: 'lti#jwks'
     get 'tool_config', to: 'lti#tool_config'
     get 'deep_link', to: 'lti#deep_link'
+    post 'deep_link', to: 'lti#deep_link_response'
   end
 
   mount Commontator::Engine => "/commontator"

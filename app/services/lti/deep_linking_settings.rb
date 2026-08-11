@@ -10,7 +10,7 @@ module Lti
 
     class Error < StandardError; end
 
-    attr_reader :return_url, :accept_types, :document_targets, :data
+    attr_reader :return_url, :accept_types, :document_targets, :data, :deployment_id
 
     class << self
       def requested?(payload)
@@ -46,6 +46,7 @@ module Lti
       @document_targets = Array(settings["accept_presentation_document_targets"])
       @accept_multiple = settings["accept_multiple"] || false
       @data = settings["data"]
+      @deployment_id = settings["lti_deployment_id"]
     end
 
     def accept_multiple?
@@ -59,7 +60,8 @@ module Lti
     def to_h
       { "deep_link_return_url" => return_url, "accept_types" => accept_types,
         "accept_presentation_document_targets" => document_targets,
-        "accept_multiple" => @accept_multiple, "data" => data }
+        "accept_multiple" => @accept_multiple, "data" => data,
+        "lti_deployment_id" => deployment_id }
     end
 
     private
