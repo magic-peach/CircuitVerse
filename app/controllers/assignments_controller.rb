@@ -170,12 +170,14 @@ class AssignmentsController < ApplicationController
     # Never trust parameters from the scary internet, only allow the white list through.
     def assignment_create_params
       params.expect(assignment: %i[name deadline description grading_scale
-                                   restrictions feature_restrictions])
+                                   restrictions feature_restrictions
+                                   partial_credit max_attempts reveal_test_cases])
     end
 
     def assignment_update_params
       params.expect(assignment: %i[name deadline description
-                                   restrictions feature_restrictions])
+                                   restrictions feature_restrictions
+                                   partial_credit max_attempts reveal_test_cases])
     end
 
     def check_access
