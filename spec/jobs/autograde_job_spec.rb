@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe AutogradeJob, type: :job do
   let(:group) { FactoryBot.create(:group, primary_mentor: FactoryBot.create(:user)) }
-  let(:assignment) { FactoryBot.create(:assignment, group: group) }
+  let(:assignment) { FactoryBot.create(:assignment, group: group, grading_scale: :percent) }
   let(:project) { FactoryBot.create(:project_datum).project }
   let(:suite) do
     { "type" => "comb",
@@ -47,6 +47,14 @@ RSpec.describe AutogradeJob, type: :job do
       stub_request(:post, endpoint).to_return(body: results.to_json)
 
       expect { described_class.perform_now(project.id) }.not_to change(GradingResult, :count)
+    end
+
+    it "refuses to run when the assignment has no grading scale" do
+      assignment.update!(grading_scale: :no_scale)
+      stub_request(:post, endpoint).to_return(body: results.to_json)
+
+      described_class.perform_now(project.id)
+      expect(GradingResult.count).to eq(0)
     end
   end
 end
