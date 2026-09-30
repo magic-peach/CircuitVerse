@@ -7,7 +7,7 @@ class AutogradeJob < ApplicationJob
     project = Project.find_by(id: project_id)
     assignment = project&.assignment
     testbench = assignment&.testbench
-    return unless testbench
+    return unless testbench && GradeScaleMapper.mappable?(assignment)
 
     max = assignment.max_attempts
     return if max && GradingResult.where(project: project).count >= max
