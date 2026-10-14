@@ -301,6 +301,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_080000) do
   create_table "group_members", force: :cascade do |t|
     t.datetime "created_at", precision: nil, null: false
     t.bigint "group_id"
+    t.boolean "lti_synced", default: false, null: false
     t.boolean "mentor", default: false
     t.datetime "updated_at", precision: nil, null: false
     t.bigint "user_id"
